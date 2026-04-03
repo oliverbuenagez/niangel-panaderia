@@ -8,7 +8,7 @@
        5.  Navegación entre tabs
        6.  Módulo: Ingredientes
        7.  Módulo: Recetas
-       8.  Módulo: Producción
+       8.  Módulo: Producción  ← fecha manual aquí
        9.  Módulo: Historial de Producción
       10.  Módulo: Estadísticas
       11.  Módulo: Clientes — formularios y listas
@@ -52,14 +52,13 @@ const db = getFirestore(app);
 
 // ══════════════════════════════════════════════════
 // 2. ESTADO GLOBAL — Arrays en memoria
-//    onSnapshot los mantiene sincronizados con Firebase
 // ══════════════════════════════════════════════════
 let ingredientes = []; // [ { id, nombre, cantidad, unidad, precio } ]
 let recetas = []; // [ { id, nombre, rinde, precio, ings: [{ingId, cantidad}] } ]
 let historial = []; // [ { id, recetaNombre, panes, precio, costoTotal, ganancia, fecha } ]
 let clientes = []; // [ { id, nombre, tipo, tel, dir, ventas:[], deudas:[], pedidosReg:[] } ]
 
-// Filtro activo del historial de ventas (para redibujar al recibir datos)
+// Filtro activo del historial de ventas
 let filtroHV = "hoy";
 
 // ══════════════════════════════════════════════════
@@ -90,7 +89,7 @@ function toast(msg) {
   setTimeout(() => t.classList.remove("visible"), 2700);
 }
 
-// — Fecha formateada —
+// — Fecha formateada (hoy) —
 function fechaHoy() {
   return new Date().toLocaleDateString("es-ES", {
     day: "2-digit",
@@ -122,20 +121,21 @@ function fechaDeInput(valor) {
 
 // Fecha por defecto para input type="date" (hoy en YYYY-MM-DD)
 function hoyParaInput() {
-  const h = new Date();
-  return h.toISOString().split("T")[0];
+  return new Date().toISOString().split("T")[0];
 }
 
 // — Filtro por rango de fecha —
-// Acepta Firestore Timestamp, número (ms) o string (YYYY-MM-DD)
+// Acepta Firestore Timestamp, número (ms), Date o string (YYYY-MM-DD)
 function esMismaFecha(ts, rango) {
   let d;
   if (ts && ts.toDate) {
     d = ts.toDate();
+  } else if (ts instanceof Date) {
+    d = ts;
   } else if (typeof ts === "number") {
     d = new Date(ts);
   } else if (typeof ts === "string") {
-    d = new Date(ts + "T00:00:00"); // string de input date
+    d = new Date(ts + "T00:00:00");
   } else {
     d = new Date(ts);
   }
@@ -153,7 +153,7 @@ function esMismaFecha(ts, rango) {
   return true; // 'todo'
 }
 
-// Días de la semana abreviados
+// Días de la semana
 const DIAS_NOM = {
   lun: "Lun",
   mar: "Mar",
@@ -178,7 +178,6 @@ const TIPOS = {
   otro: "👤 Otro",
 };
 
-// Emoji por tipo
 function emojiTipo(tipo) {
   const mapa = {
     tienda: "🏪",
@@ -198,7 +197,6 @@ function emojiTipo(tipo) {
 // 4. MODALES
 // ══════════════════════════════════════════════════
 
-// — Modal de confirmación (eliminar, pagar, etc.) —
 function confirmar({
   icono = "⚠️",
   titulo,
@@ -224,7 +222,6 @@ window.cerrarModal = function () {
   document.getElementById("modal-overlay").classList.remove("visible");
 };
 
-// — Modal de edición —
 function abrirModalEditar(
   titulo,
   bodyHTML,
@@ -256,7 +253,6 @@ window.irTab = function (tab, btn) {
   document.getElementById("tab-" + tab).classList.add("activa");
   btn.classList.add("active");
 
-  // Redibujar al entrar al tab (algunos dependen de datos actualizados)
   if (tab === "recetas") dibujarRecs();
   if (tab === "produccion") cargarSelRec();
   if (tab === "historial") dibujarHist("hoy");
@@ -268,7 +264,6 @@ window.irTab = function (tab, btn) {
 // 6. MÓDULO: INGREDIENTES
 // ══════════════════════════════════════════════════
 
-// Agregar ingrediente nuevo
 window.agregarIng = async function () {
   const nombre = document.getElementById("ing-nom").value.trim();
   const cantidad = parseFloat(document.getElementById("ing-cant").value);
@@ -292,7 +287,6 @@ window.agregarIng = async function () {
     return;
   }
 
-  // Detectar duplicado
   const dup = ingredientes.find(
     (i) => i.nombre.toLowerCase() === nombre.toLowerCase(),
   );
@@ -329,23 +323,20 @@ window.agregarIng = async function () {
   }
 };
 
-// Editar ingrediente completo (nombre, cantidad, unidad, precio)
 window.editarIng = function (id) {
   const ing = ingredientes.find((i) => i.id === id);
   if (!ing) return;
-
   const body = `
-      <div class="campo"><label>Nombre</label>
-        <input type="text" id="me-nom" value="${ing.nombre}"></div>
-      <div class="fila">
-        <div class="campo"><label>Cantidad</label>
-          <input type="number" id="me-cant" value="${ing.cantidad}" step="any" min="0"></div>
-        <div class="campo"><label>Unidad</label>
-          <input type="text" id="me-uni" value="${ing.unidad}"></div>
-      </div>
-      <div class="campo"><label>Precio ($)</label>
-        <input type="number" id="me-pre" value="${ing.precio}" step="0.01" min="0"></div>
-    `;
+    <div class="campo"><label>Nombre</label>
+      <input type="text" id="me-nom" value="${ing.nombre}"></div>
+    <div class="fila">
+      <div class="campo"><label>Cantidad</label>
+        <input type="number" id="me-cant" value="${ing.cantidad}" step="any" min="0"></div>
+      <div class="campo"><label>Unidad</label>
+        <input type="text" id="me-uni" value="${ing.unidad}"></div>
+    </div>
+    <div class="campo"><label>Precio ($)</label>
+      <input type="number" id="me-pre" value="${ing.precio}" step="0.01" min="0"></div>`;
 
   abrirModalEditar(`✏️ Editar: ${ing.nombre}`, body, async () => {
     const nombre = document.getElementById("me-nom").value.trim();
@@ -373,13 +364,11 @@ window.editarIng = function (id) {
   });
 };
 
-// Eliminar ingrediente con verificación de uso en recetas
 window.eliminarIng = function (id) {
   const ing = ingredientes.find((i) => i.id === id);
   const enUso = recetas
     .filter((r) => r.ings.some((ri) => ri.ingId === id))
     .map((r) => r.nombre);
-
   if (enUso.length) {
     confirmar({
       icono: "⚠️",
@@ -411,12 +400,12 @@ async function _borrarIng(id) {
   }
 }
 
-// Dibujar lista de ingredientes
 function dibujarIngs() {
   document.getElementById("ing-cnt").textContent = ingredientes.length;
   const c = document.getElementById("ing-lista");
   if (!ingredientes.length) {
-    c.innerHTML = `<div class="vacio"><div class="vacio-icono">🫙</div><p>La bodega está vacía.<br>Agrega tu primer ingrediente.</p></div>`;
+    c.innerHTML = `<div class="vacio"><div class="vacio-icono">🫙</div>
+                     <p>La bodega está vacía.<br>Agrega tu primer ingrediente.</p></div>`;
     return;
   }
   c.innerHTML =
@@ -425,16 +414,16 @@ function dibujarIngs() {
       .map((ing) => {
         const ppu = (ing.precio / ing.cantidad).toFixed(4);
         return `
-          <div class="item">
-            <div class="info">
-              <strong>${ing.nombre}</strong>
-              <span>${ing.cantidad} ${ing.unidad} — $${ing.precio.toFixed(2)} — $${ppu}/${ing.unidad}</span>
-            </div>
-            <div class="acciones">
-              <button class="btn btn-sm btn-editar" onclick="editarIng('${ing.id}')">✏️</button>
-              <button class="btn btn-sm btn-eliminar" onclick="eliminarIng('${ing.id}')">✕</button>
-            </div>
-          </div>`;
+        <div class="item">
+          <div class="info">
+            <strong>${ing.nombre}</strong>
+            <span>${ing.cantidad} ${ing.unidad} — $${ing.precio.toFixed(2)} — $${ppu}/${ing.unidad}</span>
+          </div>
+          <div class="acciones">
+            <button class="btn btn-sm btn-editar"   onclick="editarIng('${ing.id}')">✏️</button>
+            <button class="btn btn-sm btn-eliminar" onclick="eliminarIng('${ing.id}')">✕</button>
+          </div>
+        </div>`;
       })
       .join("") +
     "</div>";
@@ -444,7 +433,6 @@ function dibujarIngs() {
 // 7. MÓDULO: RECETAS
 // ══════════════════════════════════════════════════
 
-// Costo total de una receta (suma ingredientes × precio/unidad)
 function costoRec(rec) {
   return rec.ings.reduce((t, ri) => {
     const ing = ingredientes.find((i) => i.id === ri.ingId);
@@ -452,7 +440,6 @@ function costoRec(rec) {
   }, 0);
 }
 
-// Crear receta nueva
 window.crearRec = async function () {
   const nombre = document.getElementById("rec-nom").value.trim();
   const rinde = parseInt(document.getElementById("rec-rinde").value);
@@ -489,20 +476,18 @@ window.crearRec = async function () {
   }
 };
 
-// Editar receta (nombre, rinde, precio)
 window.editarRec = function (id) {
   const rec = recetas.find((r) => r.id === id);
   if (!rec) return;
   const body = `
-      <div class="campo"><label>Nombre del pan</label>
-        <input type="text" id="mr-nom" value="${rec.nombre}"></div>
-      <div class="fila">
-        <div class="campo"><label>Rinde (panes)</label>
-          <input type="number" id="mr-rinde" value="${rec.rinde}" min="1" step="1"></div>
-        <div class="campo"><label>Precio venta/pan ($)</label>
-          <input type="number" id="mr-precio" value="${rec.precio || ""}" step="0.01" min="0"></div>
-      </div>
-    `;
+    <div class="campo"><label>Nombre del pan</label>
+      <input type="text" id="mr-nom" value="${rec.nombre}"></div>
+    <div class="fila">
+      <div class="campo"><label>Rinde (panes)</label>
+        <input type="number" id="mr-rinde" value="${rec.rinde}" min="1" step="1"></div>
+      <div class="campo"><label>Precio venta/pan ($)</label>
+        <input type="number" id="mr-precio" value="${rec.precio || ""}" step="0.01" min="0"></div>
+    </div>`;
   abrirModalEditar(`✏️ Editar: ${rec.nombre}`, body, async () => {
     const nombre = document.getElementById("mr-nom").value.trim();
     const rinde = parseInt(document.getElementById("mr-rinde").value);
@@ -528,7 +513,6 @@ window.editarRec = function (id) {
   });
 };
 
-// Eliminar receta (verificar si tiene ventas)
 window.eliminarRec = function (id) {
   const rec = recetas.find((r) => r.id === id);
   const tieneVentas = clientes.some((c) =>
@@ -567,13 +551,11 @@ async function _borrarRec(id) {
   }
 }
 
-// Toggle acordeón de receta
 window.toggleRec = function (id) {
   document.getElementById("rb-" + id).classList.toggle("abierto");
   document.getElementById("rh-" + id).classList.toggle("abierto");
 };
 
-// Agregar ingrediente a una receta
 window.agregarIngRec = async function (recId) {
   const ingId = document.getElementById("rai-s-" + recId).value;
   const cantidad = parseFloat(document.getElementById("rai-c-" + recId).value);
@@ -602,7 +584,6 @@ window.agregarIngRec = async function (recId) {
   }
 };
 
-// Quitar ingrediente de una receta
 window.quitarIngRec = function (recId, ingId) {
   const ing = ingredientes.find((i) => i.id === ingId);
   confirmar({
@@ -627,7 +608,6 @@ window.quitarIngRec = function (recId, ingId) {
   });
 };
 
-// Dibujar lista de recetas
 function dibujarRecs() {
   document.getElementById("rec-cnt").textContent = recetas.length;
   const c = document.getElementById("rec-lista");
@@ -635,7 +615,6 @@ function dibujarRecs() {
     c.innerHTML = `<div class="vacio"><div class="vacio-icono">📋</div><p>No hay recetas aún.</p></div>`;
     return;
   }
-
   const optsIng = ingredientes
     .map((i) => `<option value="${i.id}">${i.nombre} (${i.unidad})</option>`)
     .join("");
@@ -656,92 +635,81 @@ function dibujarRecs() {
           if (!ing) return "";
           const co = (ing.precio / ing.cantidad) * ri.cantidad;
           return `
-          <div class="ing-fila">
-            <span class="ing-fila-nom">${ing.nombre}</span>
-            <span class="ing-fila-uni">${ri.cantidad} ${ing.unidad}</span>
-            <span class="ing-fila-cost">$${co.toFixed(2)}</span>
-            <button class="btn btn-sm btn-eliminar"
-              onclick="quitarIngRec('${rec.id}','${ri.ingId}')">✕</button>
-          </div>`;
+        <div class="ing-fila">
+          <span class="ing-fila-nom">${ing.nombre}</span>
+          <span class="ing-fila-uni">${ri.cantidad} ${ing.unidad}</span>
+          <span class="ing-fila-cost">$${co.toFixed(2)}</span>
+          <button class="btn btn-sm btn-eliminar"
+            onclick="quitarIngRec('${rec.id}','${ri.ingId}')">✕</button>
+        </div>`;
         })
         .join("");
 
       const formIng = ingredientes.length
         ? `<div class="agregar-ing-rec">
-             <div class="select-wrap" style="flex:1;min-width:100px">
-               <select id="rai-s-${rec.id}">
-                 <option value="">Selecciona</option>${optsIng}
-               </select>
-             </div>
-             <input type="number" id="rai-c-${rec.id}"
-               placeholder="Cantidad" step="0.1" min="0" style="max-width:95px">
-             <button class="btn btn-oscuro btn-sm" style="width:auto"
-               onclick="agregarIngRec('${rec.id}')">+ Agregar</button>
-           </div>`
+           <div class="select-wrap" style="flex:1;min-width:100px">
+             <select id="rai-s-${rec.id}">
+               <option value="">Selecciona</option>${optsIng}
+             </select>
+           </div>
+           <input type="number" id="rai-c-${rec.id}"
+             placeholder="Cantidad" step="0.1" min="0" style="max-width:95px">
+           <button class="btn btn-oscuro btn-sm" style="width:auto"
+             onclick="agregarIngRec('${rec.id}')">+ Agregar</button>
+         </div>`
         : `<p style="font-size:.8rem;color:var(--texto-s)">
-             Primero agrega ingredientes en la sección Ingredientes.
-           </p>`;
+           Primero agrega ingredientes en la sección Ingredientes.</p>`;
 
       return `
-        <div class="receta-card">
-          <div class="receta-header" id="rh-${rec.id}" onclick="toggleRec('${rec.id}')">
-            <div style="flex:1;min-width:0">
-              <h3>${rec.nombre}</h3>
-              <div class="receta-meta">
-                ${rec.ings.length} ingrediente(s) ·
-                Rinde: <strong>${rinde} panes</strong> ·
-                Costo: $${costo.toFixed(2)} ·
-                Ganancia/pan:
-                <strong style="color:${colorG}">${signo}$${ganancia.toFixed(3)}</strong>
-              </div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-              <button class="btn btn-sm btn-editar"
-                onclick="event.stopPropagation();editarRec('${rec.id}')">✏️</button>
-              <button class="btn btn-sm btn-eliminar"
-                onclick="event.stopPropagation();eliminarRec('${rec.id}')">✕</button>
-              <span class="receta-chevron">▾</span>
+      <div class="receta-card">
+        <div class="receta-header" id="rh-${rec.id}" onclick="toggleRec('${rec.id}')">
+          <div style="flex:1;min-width:0">
+            <h3>${rec.nombre}</h3>
+            <div class="receta-meta">
+              ${rec.ings.length} ingrediente(s) ·
+              Rinde: <strong>${rinde} panes</strong> ·
+              Costo: $${costo.toFixed(2)} ·
+              Ganancia/pan:
+              <strong style="color:${colorG}">${signo}$${ganancia.toFixed(3)}</strong>
             </div>
           </div>
-
-          <div class="receta-body" id="rb-${rec.id}">
-            <!-- Precio de venta configurado -->
-            <div style="background:var(--crema-o);border-radius:10px;padding:10px 13px;
-                        margin-bottom:13px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-              <div style="flex:1">
-                <span style="font-size:.68rem;font-weight:600;color:var(--cafe-mid);
-                             text-transform:uppercase;letter-spacing:.8px">Precio de venta</span>
-                <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;
-                             color:var(--cafe-rico);font-weight:700">
-                  $${precio.toFixed(2)}/pan
-                </div>
-              </div>
-              <div style="font-size:.78rem;color:var(--texto-s)">
-                Costo/pan: <strong>$${costoPan.toFixed(3)}</strong>
-              </div>
-            </div>
-
-            <!-- Ingredientes de la receta -->
-            ${
-              filasIng ||
-              `<p style="font-size:.82rem;color:var(--texto-s);margin-bottom:10px">
-                             Sin ingredientes aún.</p>`
-            }
-
-            <div class="divider"></div>
-            <p class="nota-sec">Agregar ingrediente a esta receta</p>
-            ${formIng}
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+            <button class="btn btn-sm btn-editar"
+              onclick="event.stopPropagation();editarRec('${rec.id}')">✏️</button>
+            <button class="btn btn-sm btn-eliminar"
+              onclick="event.stopPropagation();eliminarRec('${rec.id}')">✕</button>
+            <span class="receta-chevron">▾</span>
           </div>
-        </div>`;
+        </div>
+
+        <div class="receta-body" id="rb-${rec.id}">
+          <div style="background:var(--crema-o);border-radius:10px;padding:10px 13px;
+                      margin-bottom:13px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <div style="flex:1">
+              <span style="font-size:.68rem;font-weight:600;color:var(--cafe-mid);
+                           text-transform:uppercase;letter-spacing:.8px">Precio de venta</span>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;
+                           color:var(--cafe-rico);font-weight:700">$${precio.toFixed(2)}/pan</div>
+            </div>
+            <div style="font-size:.78rem;color:var(--texto-s)">
+              Costo/pan: <strong>$${costoPan.toFixed(3)}</strong>
+            </div>
+          </div>
+          ${filasIng || `<p style="font-size:.82rem;color:var(--texto-s);margin-bottom:10px">Sin ingredientes aún.</p>`}
+          <div class="divider"></div>
+          <p class="nota-sec">Agregar ingrediente a esta receta</p>
+          ${formIng}
+        </div>
+      </div>`;
     })
     .join("");
 }
 
 // ══════════════════════════════════════════════════
 // 8. MÓDULO: PRODUCCIÓN
+//    ✅ Ahora acepta fecha manual (anterior o de hoy)
 // ══════════════════════════════════════════════════
 
-// Poblar select de recetas en Producción
 window.cargarSelRec = function () {
   const sel = document.getElementById("prod-rec");
   const prev = sel.value;
@@ -756,20 +724,17 @@ window.cargarSelRec = function () {
   if (prev) verIngRec();
 };
 
-// Mostrar ingredientes escalados según panes a producir
 window.verIngRec = function () {
   const recId = document.getElementById("prod-rec").value;
   const panes = parseInt(document.getElementById("prod-pan").value) || 0;
   const c = document.getElementById("prod-det");
   if (!recId) {
-    c.innerHTML = `<div class="vacio"><div class="vacio-icono">👆</div>
-                     <p>Selecciona un pan.</p></div>`;
+    c.innerHTML = `<div class="vacio"><div class="vacio-icono">👆</div><p>Selecciona un pan.</p></div>`;
     return;
   }
   const rec = recetas.find((r) => r.id === recId);
   if (!rec || !rec.ings.length) {
-    c.innerHTML = `<div class="vacio"><div class="vacio-icono">⚠️</div>
-                     <p>Esta receta no tiene ingredientes.</p></div>`;
+    c.innerHTML = `<div class="vacio"><div class="vacio-icono">⚠️</div><p>Esta receta no tiene ingredientes.</p></div>`;
     return;
   }
 
@@ -783,9 +748,9 @@ window.verIngRec = function () {
       ? `${factor}× exactas`
       : `${factor.toFixed(2)}× (≈${Math.ceil(factor)} preparaciones)`;
     html += `<div class="prod-escala-info">
-        🧮 <strong>${panes} panes</strong> ÷ rinde <strong>${rinde}</strong>
-        = repetir receta <strong>${vecesTexto}</strong>
-      </div>`;
+      🧮 <strong>${panes} panes</strong> ÷ rinde <strong>${rinde}</strong>
+      = repetir receta <strong>${vecesTexto}</strong>
+    </div>`;
   }
 
   html +=
@@ -812,18 +777,21 @@ window.verIngRec = function () {
     "</div>";
 
   html += `<div class="divider"></div>
-      <p style="text-align:center;font-size:.81rem;color:var(--texto-s)">
-        Costo total: <strong>$${costoEscalado.toFixed(2)}</strong>
-        ${panes > 0 ? ` | Por pan: <strong>$${(costoEscalado / panes).toFixed(3)}</strong>` : ""}
-      </p>`;
+    <p style="text-align:center;font-size:.81rem;color:var(--texto-s)">
+      Costo total: <strong>$${costoEscalado.toFixed(2)}</strong>
+      ${panes > 0 ? ` | Por pan: <strong>$${(costoEscalado / panes).toFixed(3)}</strong>` : ""}
+    </p>`;
   c.innerHTML = html;
 };
 
-// Guardar producción
 window.calcularProd = async function () {
   const recId = document.getElementById("prod-rec").value;
   const panes = parseInt(document.getElementById("prod-pan").value);
   const precio = parseFloat(document.getElementById("prod-pre").value);
+
+  // ✅ Leer la fecha del input manual
+  const fechaInput = document.getElementById("prod-fecha").value;
+
   if (!recId) {
     toast("Selecciona un tipo de pan");
     return;
@@ -836,6 +804,7 @@ window.calcularProd = async function () {
     toast("Ingresa el precio de venta");
     return;
   }
+
   const rec = recetas.find((r) => r.id === recId);
   if (!rec.ings.length) {
     toast("La receta no tiene ingredientes");
@@ -851,11 +820,20 @@ window.calcularProd = async function () {
   const costoPorPan = costoTotal / panes;
   const gananciaPan = precio - costoPorPan;
 
+  // ✅ Construir objetos de fecha a partir del input
+  //    Si el usuario eligió una fecha, usamos esa.
+  //    Si dejó el campo vacío, usamos hoy.
+  const fechaObj = fechaInput
+    ? new Date(fechaInput + "T12:00:00") // mediodía para evitar desfases de zona horaria
+    : new Date();
+  const fechaTextoFinal = fechaInput ? fechaDeInput(fechaInput) : fechaHoy();
+
   syncSync();
   try {
     await addDoc(collection(db, "historial"), {
-      fecha: serverTimestamp(),
-      fechaTexto: fechaHoy(),
+      // ✅ Se guarda como Date (no serverTimestamp) para permitir fechas pasadas
+      fecha: fechaObj,
+      fechaTexto: fechaTextoFinal,
       recetaId: rec.id,
       recetaNombre: rec.nombre,
       panes,
@@ -890,73 +868,74 @@ window.calcularProd = async function () {
       if (ing.unidad === "g" || ing.unidad === "gr")
         extra = ` <span style="opacity:.6;font-size:.85em">= ${(cant / 1000).toFixed(2)}kg</span>`;
       return `<tr>
-        <td>${ing.nombre}</td>
-        <td>${cant.toFixed(2)} ${ing.unidad}${extra}</td>
-        <td style="text-align:right;font-weight:600">$${co.toFixed(2)}</td>
-      </tr>`;
+      <td>${ing.nombre}</td>
+      <td>${cant.toFixed(2)} ${ing.unidad}${extra}</td>
+      <td style="text-align:right;font-weight:600">$${co.toFixed(2)}</td>
+    </tr>`;
     })
     .join("");
 
   const res = document.getElementById("prod-res");
   res.style.display = "block";
   res.innerHTML = `
-      <div class="card" style="border-color:var(--dorado);box-shadow:var(--sombra-d)">
-        <div class="card-titulo">
-          ✅ Guardado — ${rec.nombre}
-          <span class="badge">${panes} panes · ${fechaHoy()}</span>
+    <div class="card" style="border-color:var(--dorado);box-shadow:var(--sombra-d)">
+      <div class="card-titulo">
+        ✅ Guardado — ${rec.nombre}
+        <span class="badge">${panes} panes · ${fechaTextoFinal}</span>
+      </div>
+      <div class="prod-escala-info">
+        🧮 Receta rinde <strong>${rinde}</strong> panes →
+        para <strong>${panes}</strong> panes = preparar <strong>${vTxt}</strong>
+      </div>
+      <div class="stats-grid" style="margin-bottom:14px">
+        <div class="stat-card sc-cafe">
+          <div class="stat-label">Inversión</div>
+          <div class="stat-valor">$${costoTotal.toFixed(2)}</div>
         </div>
-        <div class="prod-escala-info">
-          🧮 Receta rinde <strong>${rinde}</strong> panes →
-          para <strong>${panes}</strong> panes = preparar <strong>${vTxt}</strong>
+        <div class="stat-card sc-azul">
+          <div class="stat-label">Venta total</div>
+          <div class="stat-valor">$${totalVenta.toFixed(2)}</div>
         </div>
-        <div class="stats-grid" style="margin-bottom:14px">
-          <div class="stat-card sc-cafe">
-            <div class="stat-label">Inversión</div>
-            <div class="stat-valor">$${costoTotal.toFixed(2)}</div>
-          </div>
-          <div class="stat-card sc-azul">
-            <div class="stat-label">Venta total</div>
-            <div class="stat-valor">$${totalVenta.toFixed(2)}</div>
-          </div>
-          <div class="stat-card sc-morado">
-            <div class="stat-label">Costo/pan</div>
-            <div class="stat-valor">$${costoPorPan.toFixed(3)}</div>
-          </div>
-          <div class="stat-card sc-verde">
-            <div class="stat-label">Ganancia</div>
-            <div class="stat-valor">${s}$${ganancia.toFixed(2)}</div>
-          </div>
+        <div class="stat-card sc-morado">
+          <div class="stat-label">Costo/pan</div>
+          <div class="stat-valor">$${costoPorPan.toFixed(3)}</div>
         </div>
-        <p style="text-align:center;font-size:.82rem;color:var(--texto-s);margin-bottom:16px">
-          Ganancia por pan:
-          <strong style="color:${cg}">${s}$${gananciaPan.toFixed(3)}</strong>
-        </p>
-        <table class="tabla">
-          <thead>
-            <tr>
-              <th>Ingrediente</th><th>Total a usar</th>
-              <th style="text-align:right">Costo</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filasTabla}
-            <tr class="fila-total">
-              <td colspan="2">TOTAL INVERTIDO</td>
-              <td style="text-align:right">$${costoTotal.toFixed(2)}</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="divider"></div>
-        <button class="btn btn-gris"
-          onclick="document.getElementById('prod-res').style.display='none'">
-          Nueva producción
-        </button>
-      </div>`;
+        <div class="stat-card sc-verde">
+          <div class="stat-label">Ganancia</div>
+          <div class="stat-valor">${s}$${ganancia.toFixed(2)}</div>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:.82rem;color:var(--texto-s);margin-bottom:16px">
+        Ganancia por pan:
+        <strong style="color:${cg}">${s}$${gananciaPan.toFixed(3)}</strong>
+      </p>
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Ingrediente</th><th>Total a usar</th>
+            <th style="text-align:right">Costo</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filasTabla}
+          <tr class="fila-total">
+            <td colspan="2">TOTAL INVERTIDO</td>
+            <td style="text-align:right">$${costoTotal.toFixed(2)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="divider"></div>
+      <button class="btn btn-gris"
+        onclick="document.getElementById('prod-res').style.display='none'">
+        Nueva producción
+      </button>
+    </div>`;
 
-  // Limpiar formulario
+  // Limpiar formulario y restaurar fecha a hoy
   document.getElementById("prod-rec").value = "";
   document.getElementById("prod-pan").value = "";
   document.getElementById("prod-pre").value = "";
+  document.getElementById("prod-fecha").value = hoyParaInput(); // ✅ Restaurar a hoy
   document.getElementById("prod-det").innerHTML =
     `<div class="vacio"><div class="vacio-icono">👆</div><p>Selecciona un pan.</p></div>`;
   toast("Producción guardada en la nube ✓");
@@ -977,7 +956,6 @@ window.filtrarH = function (rango, btn) {
   dibujarHist(rango);
 };
 
-// Eliminar registro de historial
 window.eliminarHist = function (id) {
   confirmar({
     icono: "🗑️",
@@ -997,28 +975,47 @@ window.eliminarHist = function (id) {
   });
 };
 
-// Editar registro de historial (panes producidos y precio)
 window.editarHist = function (id) {
   const h = historial.find((x) => x.id === id);
   if (!h) return;
+
+  // Convertir fecha almacenada a YYYY-MM-DD para el input
+  let fechaValorInput = hoyParaInput();
+  if (h.fecha) {
+    const d = h.fecha.toDate ? h.fecha.toDate() : new Date(h.fecha);
+    fechaValorInput = d.toISOString().split("T")[0];
+  }
+
   const body = `
-      <div class="campo"><label>Panes producidos</label>
-        <input type="number" id="mh-panes" value="${h.panes}" min="1"></div>
-      <div class="campo"><label>Precio de venta/pan ($)</label>
-        <input type="number" id="mh-precio" value="${h.precio || 0}" step="0.01" min="0"></div>
-    `;
+    <div class="campo"><label>Panes producidos</label>
+      <input type="number" id="mh-panes" value="${h.panes}" min="1"></div>
+    <div class="campo"><label>Precio de venta/pan ($)</label>
+      <input type="number" id="mh-precio" value="${h.precio || 0}" step="0.01" min="0"></div>
+    <div class="campo"><label>Fecha de producción</label>
+      <input type="date" id="mh-fecha" value="${fechaValorInput}">
+      <p class="campo-ayuda">Puedes corregir la fecha si fue registrada en un día incorrecto</p>
+    </div>`;
+
   abrirModalEditar("✏️ Editar producción", body, async () => {
     const panes = parseInt(document.getElementById("mh-panes").value);
     const precio = parseFloat(document.getElementById("mh-precio").value);
+    const fechaInput = document.getElementById("mh-fecha").value;
     if (!panes || panes < 1 || isNaN(precio)) {
       toast("Datos inválidos");
       return;
     }
-    // Recalcular con el nuevo valor
+
     const factor = panes / (h.rinde || 1);
     const costoTotal = (h.costoTotal / (h.factor || 1)) * factor;
     const totalVenta = panes * precio;
     const ganancia = totalVenta - costoTotal;
+
+    // ✅ Convertir fecha editada
+    const fechaObj = fechaInput
+      ? new Date(fechaInput + "T12:00:00")
+      : new Date();
+    const fechaTextoFinal = fechaInput ? fechaDeInput(fechaInput) : fechaHoy();
+
     syncSync();
     try {
       await setDoc(
@@ -1032,6 +1029,8 @@ window.editarHist = function (id) {
           ganancia,
           costoPorPan: costoTotal / panes,
           gananciaPan: precio - costoTotal / panes,
+          fecha: fechaObj,
+          fechaTexto: fechaTextoFinal,
         },
         { merge: true },
       );
@@ -1047,14 +1046,22 @@ window.editarHist = function (id) {
 
 function dibujarHist(rango) {
   const filtrados = historial
-    .filter((h) => esMismaFecha(h.fecha, rango))
+    .filter((h) => {
+      const ts = h.fecha?.toDate
+        ? h.fecha.toDate()
+        : h.fecha instanceof Date
+          ? h.fecha
+          : new Date(h.fecha);
+      return esMismaFecha(ts, rango);
+    })
     .reverse();
+
   const rt = document.getElementById("hist-resumen");
   const c = document.getElementById("hist-lista");
   if (!filtrados.length) {
     rt.innerHTML = "";
     c.innerHTML = `<div class="vacio"><div class="vacio-icono">📅</div>
-                     <p>No hay registros en este periodo.</p></div>`;
+                      <p>No hay registros en este periodo.</p></div>`;
     return;
   }
   const tI = filtrados.reduce((t, h) => t + h.costoTotal, 0);
@@ -1062,33 +1069,33 @@ function dibujarHist(rango) {
   const tG = filtrados.reduce((t, h) => t + h.ganancia, 0);
 
   rt.innerHTML = `
-      <div class="hist-resumen">
-        <div class="hist-card"><div class="hist-label">Inversión</div>
-          <div class="hist-valor">$${tI.toFixed(2)}</div></div>
-        <div class="hist-card"><div class="hist-label">Ventas</div>
-          <div class="hist-valor">$${tV.toFixed(2)}</div></div>
-        <div class="hist-card"><div class="hist-label">Ganancia</div>
-          <div class="hist-valor">$${tG.toFixed(2)}</div></div>
-      </div>`;
+    <div class="hist-resumen">
+      <div class="hist-card"><div class="hist-label">Inversión</div>
+        <div class="hist-valor">$${tI.toFixed(2)}</div></div>
+      <div class="hist-card"><div class="hist-label">Ventas</div>
+        <div class="hist-valor">$${tV.toFixed(2)}</div></div>
+      <div class="hist-card"><div class="hist-label">Ganancia</div>
+        <div class="hist-valor">$${tG.toFixed(2)}</div></div>
+    </div>`;
 
   c.innerHTML = filtrados
     .map((h) => {
       const s = h.ganancia >= 0 ? "+" : "";
       return `
-        <div class="hist-item">
-          <div>
-            <div class="hist-fecha">${h.fechaTexto || "Sin fecha"}</div>
-            <div class="hist-pan">${h.recetaNombre}</div>
-            <div class="hist-detalle">${h.panes} panes · $${(h.precio || 0).toFixed(2)}/pan</div>
+      <div class="hist-item">
+        <div>
+          <div class="hist-fecha">${h.fechaTexto || "Sin fecha"}</div>
+          <div class="hist-pan">${h.recetaNombre}</div>
+          <div class="hist-detalle">${h.panes} panes · $${(h.precio || 0).toFixed(2)}/pan</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="hist-ganancia ${h.ganancia >= 0 ? "pos" : "neg"}">
+            ${s}$${(h.ganancia || 0).toFixed(2)}
           </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="hist-ganancia ${h.ganancia >= 0 ? "pos" : "neg"}">
-              ${s}$${(h.ganancia || 0).toFixed(2)}
-            </div>
-            <button class="btn btn-sm btn-editar" onclick="editarHist('${h.id}')">✏️</button>
-            <button class="btn btn-sm btn-eliminar" onclick="eliminarHist('${h.id}')">✕</button>
-          </div>
-        </div>`;
+          <button class="btn btn-sm btn-editar"   onclick="editarHist('${h.id}')">✏️</button>
+          <button class="btn btn-sm btn-eliminar" onclick="eliminarHist('${h.id}')">✕</button>
+        </div>
+      </div>`;
     })
     .join("");
 }
@@ -1107,7 +1114,14 @@ window.filtrarStats = function (rango, btn) {
 
 function dibujarStats(rango = "todo") {
   const c = document.getElementById("stats-con");
-  const filtrados = historial.filter((h) => esMismaFecha(h.fecha, rango));
+  const filtrados = historial.filter((h) => {
+    const ts = h.fecha?.toDate
+      ? h.fecha.toDate()
+      : h.fecha instanceof Date
+        ? h.fecha
+        : new Date(h.fecha);
+    return esMismaFecha(ts, rango);
+  });
   if (!filtrados.length) {
     c.innerHTML = `<div class="vacio"><div class="vacio-icono">📊</div>
                      <p>No hay producciones en este periodo.</p></div>`;
@@ -1118,7 +1132,6 @@ function dibujarStats(rango = "todo") {
   const tV = filtrados.reduce((t, h) => t + h.totalVenta, 0);
   const tP = filtrados.reduce((t, h) => t + h.panes, 0);
 
-  // Ranking de panes por ganancia
   const porPan = {};
   filtrados.forEach((h) => {
     if (!porPan[h.recetaNombre])
@@ -1132,7 +1145,6 @@ function dibujarStats(rango = "todo") {
   );
   const maxG = ranking[0]?.[1].ganancia || 1;
 
-  // Ventas por tipo de cliente (de todas las ventas de clientes)
   const porTipo = {};
   clientes.forEach((cli) => {
     (cli.ventas || []).forEach((v) => {
@@ -1151,78 +1163,73 @@ function dibujarStats(rango = "todo") {
   const maxT = rankingTipo[0]?.[1] || 1;
 
   c.innerHTML = `
-      <!-- 4 tarjetas resumen -->
-      <div class="stats-grid">
-        <div class="stat-card sc-dorado">
-          <div class="stat-label">Ganancia total</div>
-          <div class="stat-valor">$${tG.toFixed(2)}</div>
-        </div>
-        <div class="stat-card sc-verde">
-          <div class="stat-label">Total vendido</div>
-          <div class="stat-valor">$${tV.toFixed(2)}</div>
-        </div>
-        <div class="stat-card sc-azul">
-          <div class="stat-label">Panes</div>
-          <div class="stat-valor">${tP}</div>
-        </div>
-        <div class="stat-card sc-cafe">
-          <div class="stat-label">Producciones</div>
-          <div class="stat-valor">${filtrados.length}</div>
-        </div>
+    <div class="stats-grid">
+      <div class="stat-card sc-dorado">
+        <div class="stat-label">Ganancia total</div>
+        <div class="stat-valor">$${tG.toFixed(2)}</div>
       </div>
-
-      <!-- Ranking de panes -->
-      <div class="card">
-        <div class="card-titulo">🏆 Pan más rentable</div>
-        ${ranking
-          .map(
-            ([nom, data], i) => `
-          <div class="ranking-item">
-            <div class="ranking-num ${i === 0 ? "oro" : ""}">${i + 1}</div>
-            <div class="ranking-info">
-              <div class="ranking-nom">${nom}</div>
-              <div class="ranking-det">${data.veces} producción(es) · ${data.panes} panes</div>
-              <div class="barra-wrap">
-                <div class="barra-fill" style="width:${Math.round((data.ganancia / maxG) * 100)}%"></div>
-              </div>
-            </div>
-            <div class="ranking-tot">$${data.ganancia.toFixed(2)}</div>
-          </div>`,
-          )
-          .join("")}
+      <div class="stat-card sc-verde">
+        <div class="stat-label">Total vendido</div>
+        <div class="stat-valor">$${tV.toFixed(2)}</div>
       </div>
+      <div class="stat-card sc-azul">
+        <div class="stat-label">Panes</div>
+        <div class="stat-valor">${tP}</div>
+      </div>
+      <div class="stat-card sc-cafe">
+        <div class="stat-label">Producciones</div>
+        <div class="stat-valor">${filtrados.length}</div>
+      </div>
+    </div>
 
-      <!-- Ventas por tipo de cliente -->
-      ${
-        rankingTipo.length
-          ? `
-      <div class="card">
-        <div class="card-titulo">🏪 Ventas por tipo de cliente</div>
-        ${rankingTipo
-          .map(
-            ([tipo, total]) => `
-          <div class="ranking-item">
-            <div style="flex:1">
-              <div class="ranking-nom">${TIPOS[tipo] || tipo}</div>
-              <div class="barra-wrap">
-                <div class="barra-fill" style="width:${Math.round((total / maxT) * 100)}%"></div>
-              </div>
+    <div class="card">
+      <div class="card-titulo">🏆 Pan más rentable</div>
+      ${ranking
+        .map(
+          ([nom, data], i) => `
+        <div class="ranking-item">
+          <div class="ranking-num ${i === 0 ? "oro" : ""}">${i + 1}</div>
+          <div class="ranking-info">
+            <div class="ranking-nom">${nom}</div>
+            <div class="ranking-det">${data.veces} producción(es) · ${data.panes} panes</div>
+            <div class="barra-wrap">
+              <div class="barra-fill" style="width:${Math.round((data.ganancia / maxG) * 100)}%"></div>
             </div>
-            <div class="ranking-tot">$${total.toFixed(2)}</div>
-          </div>`,
-          )
-          .join("")}
-      </div>`
-          : ""
-      }
-    `;
+          </div>
+          <div class="ranking-tot">$${data.ganancia.toFixed(2)}</div>
+        </div>`,
+        )
+        .join("")}
+    </div>
+
+    ${
+      rankingTipo.length
+        ? `
+    <div class="card">
+      <div class="card-titulo">🏪 Ventas por tipo de cliente</div>
+      ${rankingTipo
+        .map(
+          ([tipo, total]) => `
+        <div class="ranking-item">
+          <div style="flex:1">
+            <div class="ranking-nom">${TIPOS[tipo] || tipo}</div>
+            <div class="barra-wrap">
+              <div class="barra-fill" style="width:${Math.round((total / maxT) * 100)}%"></div>
+            </div>
+          </div>
+          <div class="ranking-tot">$${total.toFixed(2)}</div>
+        </div>`,
+        )
+        .join("")}
+    </div>`
+        : ""
+    }`;
 }
 
 // ══════════════════════════════════════════════════
-// 11. MÓDULO: CLIENTES — Formularios y lista
+// 11. MÓDULO: CLIENTES
 // ══════════════════════════════════════════════════
 
-// Agregar cliente nuevo
 window.agregarCli = async function () {
   const nombre = document.getElementById("cli-nom").value.trim();
   const tipo = document.getElementById("cli-tip").value;
@@ -1232,8 +1239,6 @@ window.agregarCli = async function () {
     toast("Escribe el nombre");
     return;
   }
-
-  // Detectar duplicado
   if (clientes.find((c) => c.nombre.toLowerCase() === nombre.toLowerCase())) {
     toast("Ya existe un cliente con ese nombre");
     return;
@@ -1261,7 +1266,6 @@ window.agregarCli = async function () {
   }
 };
 
-// Editar datos del cliente
 window.editarCli = function (id) {
   const cli = clientes.find((c) => c.id === id);
   if (!cli) return;
@@ -1272,17 +1276,16 @@ window.editarCli = function (id) {
     )
     .join("");
   const body = `
-      <div class="campo"><label>Nombre</label>
-        <input type="text" id="mc-nom" value="${cli.nombre}"></div>
-      <div class="campo"><label>Tipo</label>
-        <div class="select-wrap"><select id="mc-tip">${opcionsTipo}</select></div></div>
-      <div class="fila">
-        <div class="campo"><label>Teléfono</label>
-          <input type="text" id="mc-tel" value="${cli.tel || ""}"></div>
-        <div class="campo"><label>Dirección</label>
-          <input type="text" id="mc-dir" value="${cli.dir || ""}"></div>
-      </div>
-    `;
+    <div class="campo"><label>Nombre</label>
+      <input type="text" id="mc-nom" value="${cli.nombre}"></div>
+    <div class="campo"><label>Tipo</label>
+      <div class="select-wrap"><select id="mc-tip">${opcionsTipo}</select></div></div>
+    <div class="fila">
+      <div class="campo"><label>Teléfono</label>
+        <input type="text" id="mc-tel" value="${cli.tel || ""}"></div>
+      <div class="campo"><label>Dirección</label>
+        <input type="text" id="mc-dir" value="${cli.dir || ""}"></div>
+    </div>`;
   abrirModalEditar(`✏️ Editar: ${cli.nombre}`, body, async () => {
     const nombre = document.getElementById("mc-nom").value.trim();
     const tipo = document.getElementById("mc-tip").value;
@@ -1309,7 +1312,6 @@ window.editarCli = function (id) {
   });
 };
 
-// Eliminar cliente
 window.eliminarCli = function (id) {
   const cli = clientes.find((c) => c.id === id);
   confirmar({
@@ -1330,13 +1332,11 @@ window.eliminarCli = function (id) {
   });
 };
 
-// Toggle acordeón del cliente
 window.toggleCli = function (id) {
   document.getElementById("ccb-" + id).classList.toggle("abierto");
   document.getElementById("cch-" + id).classList.toggle("abierto");
 };
 
-// Cambiar tab dentro del perfil del cliente
 window.verTabCli = function (cliId, tab) {
   ["ventas", "deudas", "regulares", "stats"].forEach((t) => {
     const panel = document.getElementById(`ct-${t}-${cliId}`);
@@ -1346,14 +1346,12 @@ window.verTabCli = function (cliId, tab) {
   });
 };
 
-// Buscador de clientes
 let busquedaCli = "";
 window.buscarCli = function (valor) {
   busquedaCli = valor.toLowerCase();
   dibujarClis();
 };
 
-// Refrescar selects de clientes y recetas en los formularios
 function refrescarSelects() {
   const optsCli =
     '<option value="">Selecciona cliente</option>' +
@@ -1372,8 +1370,6 @@ function refrescarSelects() {
     const el = document.getElementById(id);
     if (el) el.innerHTML = optsRec;
   });
-
-  // Actualizar también las filas dinámicas de venta
   document.querySelectorAll(".vf-rec").forEach((sel) => {
     const prev = sel.value;
     sel.innerHTML = optsRec;
@@ -1381,9 +1377,7 @@ function refrescarSelects() {
   });
 }
 
-// Dibujar lista completa de clientes
 function dibujarClis() {
-  // — Resumen general —
   const totalDeuda = clientes.reduce(
     (s, c) => s + (c.deudas || []).reduce((t, d) => t + d.monto, 0),
     0,
@@ -1408,7 +1402,7 @@ function dibujarClis() {
   _set("cli-pan-sem", panSem);
   _set("cli-deuda-tot", `$${totalDeuda.toFixed(2)}`);
 
-  // — Panel de alertas (inactivos +7 días) —
+  // Panel de alertas (inactivos +7 días)
   const hoy7 = new Date();
   hoy7.setDate(hoy7.getDate() - 7);
   const inactivos = clientes.filter((cli) => {
@@ -1431,24 +1425,24 @@ function dibujarClis() {
           ? Math.floor((Date.now() - ultima) / 86400000)
           : "?";
         return `
-          <div class="alerta-item">
-            <span class="alerta-nombre">${cli.nombre}</span>
-            <span class="alerta-dias">${dias} día(s) sin comprar</span>
-          </div>`;
+        <div class="alerta-item">
+          <span class="alerta-nombre">${cli.nombre}</span>
+          <span class="alerta-dias">${dias} día(s) sin comprar</span>
+        </div>`;
       })
       .join("");
   } else {
     panelAl.style.display = "none";
   }
 
-  // — Lista de clientes (con buscador) —
+  // Lista de clientes
   const c = document.getElementById("cli-lista");
   let lista = clientes;
   if (busquedaCli)
     lista = lista.filter((cl) => cl.nombre.toLowerCase().includes(busquedaCli));
   if (!lista.length) {
     c.innerHTML = `<div class="vacio"><div class="vacio-icono">👥</div>
-                     <p>${busquedaCli ? "Sin resultados para esa búsqueda." : "No hay clientes aún."}</p></div>`;
+                     <p>${busquedaCli ? "Sin resultados." : "No hay clientes aún."}</p></div>`;
     refrescarSelects();
     dibujarRankings();
     return;
@@ -1483,7 +1477,6 @@ function dibujarClis() {
           );
         }).length >= 4;
 
-      // Badges
       let badges = "";
       if (esFrecuente)
         badges += `<span class="badge-estado badge-frecuente">⭐ Frecuente</span>`;
@@ -1493,72 +1486,66 @@ function dibujarClis() {
         badges += `<span class="badge-estado badge-debe">Debe $${deudaTotal.toFixed(2)}</span>`;
       else badges += `<span class="badge-estado badge-al-dia">✅ Al día</span>`;
 
-      // — Tabs del cliente —
       const tabVentas = _htmlTabVentas(cli);
       const tabDeudas = _htmlTabDeudas(cli);
       const tabRegulares = _htmlTabRegulares(cli);
       const tabStats = _htmlTabStats(cli);
 
       return `
-        <div class="cliente-card">
-          <div class="cliente-header" id="cch-${cli.id}" onclick="toggleCli('${cli.id}')">
-            <div class="cliente-info-wrap">
-              <div class="cliente-avatar">${emojiTipo(cli.tipo)}</div>
-              <div style="min-width:0">
-                <div class="cliente-nombre">${cli.nombre}</div>
-                <div class="cliente-tipo">
-                  ${TIPOS[cli.tipo] || cli.tipo}
-                  ${cli.tel ? " · " + cli.tel : ""}
-                </div>
-              </div>
+      <div class="cliente-card">
+        <div class="cliente-header" id="cch-${cli.id}" onclick="toggleCli('${cli.id}')">
+          <div class="cliente-info-wrap">
+            <div class="cliente-avatar">${emojiTipo(cli.tipo)}</div>
+            <div style="min-width:0">
+              <div class="cliente-nombre">${cli.nombre}</div>
+              <div class="cliente-tipo">${TIPOS[cli.tipo] || cli.tipo}${cli.tel ? " · " + cli.tel : ""}</div>
             </div>
-            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0">
-              ${badges}
-              <button class="btn btn-sm btn-editar"
-                onclick="event.stopPropagation();editarCli('${cli.id}')">✏️</button>
-              <button class="btn btn-sm btn-eliminar"
-                onclick="event.stopPropagation();eliminarCli('${cli.id}')">✕</button>
-              <span style="color:var(--cafe-claro);font-size:.8rem">▾</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0">
+            ${badges}
+            <button class="btn btn-sm btn-editar"
+              onclick="event.stopPropagation();editarCli('${cli.id}')">✏️</button>
+            <button class="btn btn-sm btn-eliminar"
+              onclick="event.stopPropagation();eliminarCli('${cli.id}')">✕</button>
+            <span style="color:var(--cafe-claro);font-size:.8rem">▾</span>
+          </div>
+        </div>
+
+        <div class="cliente-body" id="ccb-${cli.id}">
+          <div class="cli-mini-stats">
+            <div class="cli-mini-stat">
+              <div class="cli-mini-label">Total comprado</div>
+              <div class="cli-mini-valor">$${ventaTotal.toFixed(2)}</div>
+            </div>
+            <div class="cli-mini-stat">
+              <div class="cli-mini-label">Panes totales</div>
+              <div class="cli-mini-valor">${panesTotales}</div>
+            </div>
+            <div class="cli-mini-stat">
+              <div class="cli-mini-label"># Compras</div>
+              <div class="cli-mini-valor">${(cli.ventas || []).length}</div>
             </div>
           </div>
 
-          <div class="cliente-body" id="ccb-${cli.id}">
-            <!-- Mini stats -->
-            <div class="cli-mini-stats">
-              <div class="cli-mini-stat">
-                <div class="cli-mini-label">Total comprado</div>
-                <div class="cli-mini-valor">$${ventaTotal.toFixed(2)}</div>
-              </div>
-              <div class="cli-mini-stat">
-                <div class="cli-mini-label">Panes totales</div>
-                <div class="cli-mini-valor">${panesTotales}</div>
-              </div>
-              <div class="cli-mini-stat">
-                <div class="cli-mini-label"># Compras</div>
-                <div class="cli-mini-valor">${(cli.ventas || []).length}</div>
-              </div>
-            </div>
-
-            <!-- Tabs -->
-            <div class="cli-tabs">
-              <button class="cli-tab-btn activo" id="ctb-ventas-${cli.id}"
-                onclick="verTabCli('${cli.id}','ventas')">🛍️ Ventas</button>
-              <button class="cli-tab-btn" id="ctb-deudas-${cli.id}"
-                onclick="verTabCli('${cli.id}','deudas')">
-                💳 Deudas${deudaTotal > 0 ? " ⚠️" : ""}
-              </button>
-              <button class="cli-tab-btn" id="ctb-regulares-${cli.id}"
-                onclick="verTabCli('${cli.id}','regulares')">🔁 Regulares</button>
-              <button class="cli-tab-btn" id="ctb-stats-${cli.id}"
-                onclick="verTabCli('${cli.id}','stats')">📊 Stats</button>
-            </div>
-
-            <div id="ct-ventas-${cli.id}">${tabVentas}</div>
-            <div id="ct-deudas-${cli.id}" style="display:none">${tabDeudas}</div>
-            <div id="ct-regulares-${cli.id}" style="display:none">${tabRegulares}</div>
-            <div id="ct-stats-${cli.id}" style="display:none">${tabStats}</div>
+          <div class="cli-tabs">
+            <button class="cli-tab-btn activo" id="ctb-ventas-${cli.id}"
+              onclick="verTabCli('${cli.id}','ventas')">🛍️ Ventas</button>
+            <button class="cli-tab-btn" id="ctb-deudas-${cli.id}"
+              onclick="verTabCli('${cli.id}','deudas')">
+              💳 Deudas${deudaTotal > 0 ? " ⚠️" : ""}
+            </button>
+            <button class="cli-tab-btn" id="ctb-regulares-${cli.id}"
+              onclick="verTabCli('${cli.id}','regulares')">🔁 Regulares</button>
+            <button class="cli-tab-btn" id="ctb-stats-${cli.id}"
+              onclick="verTabCli('${cli.id}','stats')">📊 Stats</button>
           </div>
-        </div>`;
+
+          <div id="ct-ventas-${cli.id}">${tabVentas}</div>
+          <div id="ct-deudas-${cli.id}" style="display:none">${tabDeudas}</div>
+          <div id="ct-regulares-${cli.id}" style="display:none">${tabRegulares}</div>
+          <div id="ct-stats-${cli.id}" style="display:none">${tabStats}</div>
+        </div>
+      </div>`;
     })
     .join("");
 
@@ -1566,13 +1553,10 @@ function dibujarClis() {
   dibujarRankings();
 }
 
-// ── HTML de cada tab ──
-
 function _htmlTabVentas(cli) {
   const ventas = (cli.ventas || []).slice().reverse();
   if (!ventas.length)
-    return `<p style="font-size:.82rem;color:var(--texto-s);padding:8px 0">
-                Sin ventas registradas aún.</p>`;
+    return `<p style="font-size:.82rem;color:var(--texto-s);padding:8px 0">Sin ventas registradas aún.</p>`;
   return (
     ventas
       .slice(0, 10)
@@ -1592,28 +1576,22 @@ function _htmlTabVentas(cli) {
           .map((p) => `${p.cantidad} × ${p.recetaNombre}`)
           .join(", ");
         return `
-        <div class="venta-item">
-          <div>
-            <div class="vi-pan">🍞 ${resumen}</div>
-            <div class="vi-det">${v.fecha || ""}${v.nota ? " · " + v.nota : ""}
-              · $${panes[0]?.precioUnit?.toFixed(2) || "?"}/u</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div class="vi-monto ${v.pago}">$${total.toFixed(2)}</div>
-            <div style="font-size:.67rem;color:var(--texto-s)">
-              ${v.pago === "pagado" ? "✅ Pagado" : "⏳ Fiado"}
-            </div>
-            <button class="btn btn-sm btn-editar" style="margin-top:3px"
-              onclick="editarVenta('${cli.id}',${v.id})">✏️</button>
-            <button class="btn btn-sm btn-eliminar" style="margin-top:3px"
-              onclick="eliminarVenta('${cli.id}',${v.id})">✕</button>
-          </div>
-        </div>`;
+      <div class="venta-item">
+        <div>
+          <div class="vi-pan">🍞 ${resumen}</div>
+          <div class="vi-det">${v.fecha || ""}${v.nota ? " · " + v.nota : ""} · $${panes[0]?.precioUnit?.toFixed(2) || "?"}/u</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="vi-monto ${v.pago}">$${total.toFixed(2)}</div>
+          <div style="font-size:.67rem;color:var(--texto-s)">${v.pago === "pagado" ? "✅ Pagado" : "⏳ Fiado"}</div>
+          <button class="btn btn-sm btn-editar"   style="margin-top:3px" onclick="editarVenta('${cli.id}',${v.id})">✏️</button>
+          <button class="btn btn-sm btn-eliminar" style="margin-top:3px" onclick="eliminarVenta('${cli.id}',${v.id})">✕</button>
+        </div>
+      </div>`;
       })
       .join("") +
     (ventas.length > 10
-      ? `<p style="font-size:.73rem;color:var(--texto-s);text-align:center;padding-top:4px">
-           + ${ventas.length - 10} ventas anteriores</p>`
+      ? `<p style="font-size:.73rem;color:var(--texto-s);text-align:center;padding-top:4px">+ ${ventas.length - 10} ventas anteriores</p>`
       : "")
   );
 }
@@ -1627,57 +1605,51 @@ function _htmlTabDeudas(cli) {
     html += deudas
       .map(
         (d) => `
-        <div class="deuda-item">
-          <div>
-            <div class="deuda-desc">${d.desc}</div>
-            <div class="deuda-fecha">${d.fecha}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="deuda-monto">$${d.monto.toFixed(2)}</div>
-            <button class="btn btn-sm btn-verde" onclick="pagarDeuda('${cli.id}',${d.id})">✓ Pagó</button>
-          </div>
-        </div>`,
+      <div class="deuda-item">
+        <div>
+          <div class="deuda-desc">${d.desc}</div>
+          <div class="deuda-fecha">${d.fecha}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="deuda-monto">$${d.monto.toFixed(2)}</div>
+          <button class="btn btn-sm btn-verde" onclick="pagarDeuda('${cli.id}',${d.id})">✓ Pagó</button>
+        </div>
+      </div>`,
       )
       .join("");
   }
   html += `
-      <div class="divider"></div>
-      <p class="nota-sec">Agregar deuda manual</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <input type="text" id="deu-d-${cli.id}" placeholder="Descripción"
-               style="flex:1;min-width:120px">
-        <input type="number" id="deu-m-${cli.id}" placeholder="$"
-               step="0.01" min="0" style="max-width:80px">
-        <button class="btn btn-oscuro btn-sm" style="width:auto"
-          onclick="agregarDeuda('${cli.id}')">+ Deuda</button>
-      </div>`;
+    <div class="divider"></div>
+    <p class="nota-sec">Agregar deuda manual</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input type="text"   id="deu-d-${cli.id}" placeholder="Descripción" style="flex:1;min-width:120px">
+      <input type="number" id="deu-m-${cli.id}" placeholder="$" step="0.01" min="0" style="max-width:80px">
+      <button class="btn btn-oscuro btn-sm" style="width:auto" onclick="agregarDeuda('${cli.id}')">+ Deuda</button>
+    </div>`;
   return html;
 }
 
 function _htmlTabRegulares(cli) {
   const regs = cli.pedidosReg || [];
   if (!regs.length)
-    return `<p style="font-size:.82rem;color:var(--texto-s);padding:8px 0">
-                Sin pedidos regulares. Configúralos abajo.</p>`;
+    return `<p style="font-size:.82rem;color:var(--texto-s);padding:8px 0">Sin pedidos regulares. Configúralos abajo.</p>`;
   const totSem = regs.reduce((t, r) => t + r.cantidad * r.dias.length, 0);
   return (
     regs
       .map(
         (r) => `
-      <div class="regular-item">
-        <div class="reg-info">
-          <div class="reg-nombre">🍞 ${r.cantidad} × ${r.recetaNombre}</div>
-          <div class="reg-dias-wrap">
-            ${r.dias.map((d) => `<span class="dia-badge">${DIAS_NOM[d] || d}</span>`).join("")}
-          </div>
+    <div class="regular-item">
+      <div class="reg-info">
+        <div class="reg-nombre">🍞 ${r.cantidad} × ${r.recetaNombre}</div>
+        <div class="reg-dias-wrap">
+          ${r.dias.map((d) => `<span class="dia-badge">${DIAS_NOM[d] || d}</span>`).join("")}
         </div>
-        <button class="btn btn-sm btn-eliminar"
-          onclick="eliminarReg('${cli.id}',${r.id})">✕</button>
-      </div>`,
+      </div>
+      <button class="btn btn-sm btn-eliminar" onclick="eliminarReg('${cli.id}',${r.id})">✕</button>
+    </div>`,
       )
       .join("") +
-    `<p style="font-size:.77rem;color:var(--texto-s);margin-top:7px">
-         📦 Total estimado: <strong>${totSem} panes/semana</strong></p>`
+    `<p style="font-size:.77rem;color:var(--texto-s);margin-top:7px">📦 Total estimado: <strong>${totSem} panes/semana</strong></p>`
   );
 }
 
@@ -1686,7 +1658,6 @@ function _htmlTabStats(cli) {
   if (!ventas.length)
     return `<p style="font-size:.82rem;color:var(--texto-s);padding:8px 0">Sin ventas aún.</p>`;
 
-  // Panes favoritos
   const porPan = {};
   ventas.forEach((v) => {
     const panes = v.panes || [
@@ -1700,41 +1671,22 @@ function _htmlTabStats(cli) {
   const favs = Object.entries(porPan).sort((a, b) => b[1] - a[1]);
   const maxF = favs[0]?.[1] || 1;
 
-  // Ventas por semana (últimas 4)
-  const porSem = {};
-  ventas.forEach((v) => {
-    const d = v.ts ? new Date(v.ts) : null;
-    if (!d) return;
-    const semana = `Sem ${Math.ceil(d.getDate() / 7)} - ${d.toLocaleString("es", { month: "short" })}`;
-    if (!porSem[semana]) porSem[semana] = 0;
-    const panes = v.panes || [
-      { cantidad: v.cantidad, precioUnit: v.precioUnit },
-    ];
-    porSem[semana] += panes.reduce(
-      (t, p) => t + (p.cantidad || 0) * (p.precioUnit || 0),
-      0,
-    );
-  });
-
   return `
-      <p class="nota-sec">Panes favoritos</p>
-      ${favs
-        .map(
-          ([nom, cant]) => `
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
-          <span style="flex:1;font-size:.84rem;color:var(--cafe-rico)">${nom}</span>
-          <div style="width:80px">
-            <div class="barra-wrap">
-              <div class="barra-fill" style="width:${Math.round((cant / maxF) * 100)}%"></div>
-            </div>
+    <p class="nota-sec">Panes favoritos</p>
+    ${favs
+      .map(
+        ([nom, cant]) => `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+        <span style="flex:1;font-size:.84rem;color:var(--cafe-rico)">${nom}</span>
+        <div style="width:80px">
+          <div class="barra-wrap">
+            <div class="barra-fill" style="width:${Math.round((cant / maxF) * 100)}%"></div>
           </div>
-          <span style="font-size:.78rem;font-weight:700;color:var(--cafe-mid);min-width:30px;text-align:right">
-            ${cant}
-          </span>
-        </div>`,
-        )
-        .join("")}
-    `;
+        </div>
+        <span style="font-size:.78rem;font-weight:700;color:var(--cafe-mid);min-width:30px;text-align:right">${cant}</span>
+      </div>`,
+      )
+      .join("")}`;
 }
 
 // ══════════════════════════════════════════════════
@@ -1758,35 +1710,31 @@ window.agregarFilaVenta = function () {
   fila.className = "vta-fila";
   fila.id = `vf-${id}`;
   fila.innerHTML = `
-      <div class="campo" style="flex:2;margin-bottom:0">
-        <label style="font-size:.65rem">Pan</label>
-        <div class="select-wrap">
-          <select class="vf-rec" data-fila="${id}" onchange="onSelRecVenta(${id})">
-            <option value="">Tipo de pan</option>${optsRec}
-          </select>
-        </div>
+    <div class="campo" style="flex:2;margin-bottom:0">
+      <label style="font-size:.65rem">Pan</label>
+      <div class="select-wrap">
+        <select class="vf-rec" data-fila="${id}" onchange="onSelRecVenta(${id})">
+          <option value="">Tipo de pan</option>${optsRec}
+        </select>
       </div>
-      <div class="campo campo-cant" style="margin-bottom:0">
-        <label style="font-size:.65rem">Cantidad</label>
-        <input type="number" class="vf-cant" data-fila="${id}"
-               placeholder="0" min="1" oninput="recalcularTotal()">
-      </div>
-      <div class="campo campo-pre" style="margin-bottom:0">
-        <label style="font-size:.65rem">Precio/u ($)</label>
-        <input type="number" class="vf-pre" data-fila="${id}"
-               placeholder="0.00" step="0.01" min="0" oninput="recalcularTotal()">
-      </div>
-      ${
-        id > 0
-          ? `<button class="btn btn-sm btn-eliminar" style="align-self:flex-end;width:auto"
-             onclick="quitarFilaVenta(${id})">✕</button>`
-          : '<div style="width:32px"></div>'
-      }
-    `;
+    </div>
+    <div class="campo campo-cant" style="margin-bottom:0">
+      <label style="font-size:.65rem">Cantidad</label>
+      <input type="number" class="vf-cant" data-fila="${id}" placeholder="0" min="1" oninput="recalcularTotal()">
+    </div>
+    <div class="campo campo-pre" style="margin-bottom:0">
+      <label style="font-size:.65rem">Precio/u ($)</label>
+      <input type="number" class="vf-pre" data-fila="${id}" placeholder="0.00" step="0.01" min="0" oninput="recalcularTotal()">
+    </div>
+    ${
+      id > 0
+        ? `<button class="btn btn-sm btn-eliminar" style="align-self:flex-end;width:auto"
+           onclick="quitarFilaVenta(${id})">✕</button>`
+        : '<div style="width:32px"></div>'
+    }`;
   document.getElementById("vta-filas").appendChild(fila);
 };
 
-// Al seleccionar una receta en una fila, autocompleta precio
 window.onSelRecVenta = function (id) {
   const recId = document.querySelector(`.vf-rec[data-fila="${id}"]`).value;
   const rec = recetas.find((r) => r.id === recId);
@@ -1814,7 +1762,6 @@ window.recalcularTotal = function () {
     `$${total.toFixed(2)}`;
 };
 
-// Registrar venta
 window.registrarVenta = async function () {
   const cliId = document.getElementById("vta-cli").value;
   const fecha = document.getElementById("vta-fecha").value;
@@ -1825,7 +1772,6 @@ window.registrarVenta = async function () {
     return;
   }
 
-  // Recoger todas las filas
   const panesData = [];
   let valido = true;
   document.querySelectorAll(".vta-fila").forEach((fila) => {
@@ -1850,7 +1796,6 @@ window.registrarVenta = async function () {
       precioUnit,
     });
   });
-
   if (!valido || !panesData.length) {
     toast("Completa todos los panes (tipo, cantidad y precio)");
     return;
@@ -1899,7 +1844,6 @@ window.registrarVenta = async function () {
   }
 };
 
-// Editar venta
 window.editarVenta = function (cliId, ventaId) {
   const cli = clientes.find((c) => c.id === cliId);
   const venta = (cli.ventas || []).find((v) => v.id === ventaId);
@@ -1912,39 +1856,34 @@ window.editarVenta = function (cliId, ventaId) {
       precioUnit: venta.precioUnit,
     },
   ];
-  const optsRec = recetas
-    .map((r) => `<option value="${r.id}">${r.nombre}</option>`)
-    .join("");
 
   const filasHTML = panes
     .map(
       (p, i) => `
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;
-                  padding:8px;background:var(--crema);border-radius:10px">
-        <span style="font-size:.82rem;font-weight:600;color:var(--cafe-rico);flex:2">${p.recetaNombre}</span>
-        <input type="number" id="ev-cant-${i}" value="${p.cantidad}"
-               min="1" style="width:70px" oninput="evTotal()">
-        <span style="font-size:.75rem;color:var(--texto-s)">× $</span>
-        <input type="number" id="ev-pre-${i}" value="${p.precioUnit}"
-               step="0.01" min="0" style="width:75px" oninput="evTotal()">
-      </div>`,
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;
+                padding:8px;background:var(--crema);border-radius:10px">
+      <span style="font-size:.82rem;font-weight:600;color:var(--cafe-rico);flex:2">${p.recetaNombre}</span>
+      <input type="number" id="ev-cant-${i}" value="${p.cantidad}"    min="1" style="width:70px" oninput="evTotal()">
+      <span style="font-size:.75rem;color:var(--texto-s)">× $</span>
+      <input type="number" id="ev-pre-${i}"  value="${p.precioUnit}" step="0.01" min="0" style="width:75px" oninput="evTotal()">
+    </div>`,
     )
     .join("");
 
   const body = `
-      ${filasHTML}
-      <div style="text-align:right;font-size:.88rem;color:var(--texto-s);margin-top:4px">
-        Total: <strong id="ev-total">$0</strong>
+    ${filasHTML}
+    <div style="text-align:right;font-size:.88rem;color:var(--texto-s);margin-top:4px">
+      Total: <strong id="ev-total">$0</strong>
+    </div>
+    <div class="campo" style="margin-top:12px">
+      <label>Estado de pago</label>
+      <div class="select-wrap">
+        <select id="ev-pago">
+          <option value="pagado"${venta.pago === "pagado" ? " selected" : ""}>✅ Pagado</option>
+          <option value="fiado"${venta.pago === "fiado" ? " selected" : ""}>⏳ Fiado</option>
+        </select>
       </div>
-      <div class="campo" style="margin-top:12px">
-        <label>Estado de pago</label>
-        <div class="select-wrap">
-          <select id="ev-pago">
-            <option value="pagado"${venta.pago === "pagado" ? " selected" : ""}>✅ Pagado</option>
-            <option value="fiado"${venta.pago === "fiado" ? " selected" : ""}>⏳ Fiado</option>
-          </select>
-        </div>
-      </div>`;
+    </div>`;
 
   window.evTotal = () => {
     let t = 0;
@@ -1989,7 +1928,6 @@ window.editarVenta = function (cliId, ventaId) {
   setTimeout(() => window.evTotal(), 50);
 };
 
-// Eliminar venta
 window.eliminarVenta = function (cliId, ventaId) {
   confirmar({
     icono: "🗑️",
@@ -2057,7 +1995,6 @@ window.guardarPedidoReg = async function () {
     cantidad: cant,
     dias: [...diasSeleccionados],
   };
-  // Reemplaza si ya hay uno para esa receta
   const regs = [
     ...(cli.pedidosReg || []).filter((r) => r.recetaId !== recId),
     reg,
@@ -2197,7 +2134,6 @@ function dibujarHistVentas(rango) {
       });
     });
   });
-
   todasVentas.sort((a, b) => (b.ts || 0) - (a.ts || 0));
 
   const res = document.getElementById("hv-resumen");
@@ -2205,8 +2141,7 @@ function dibujarHistVentas(rango) {
 
   if (!todasVentas.length) {
     res.innerHTML = "";
-    lst.innerHTML = `<div class="vacio"><div class="vacio-icono">🛍️</div>
-                       <p>No hay ventas en este periodo.</p></div>`;
+    lst.innerHTML = `<div class="vacio"><div class="vacio-icono">🛍️</div><p>No hay ventas en este periodo.</p></div>`;
     return;
   }
 
@@ -2219,20 +2154,20 @@ function dibujarHistVentas(rango) {
     .reduce((t, v) => t + v.total, 0);
 
   res.innerHTML = `
-      <div class="hv-resumen-wrap">
-        <div class="hv-res-card">
-          <div class="hv-res-label">Total</div>
-          <div class="hv-res-valor">$${tTotal.toFixed(2)}</div>
-        </div>
-        <div class="hv-res-card">
-          <div class="hv-res-label">Pagado</div>
-          <div class="hv-res-valor" style="color:var(--verde)">$${tPagado.toFixed(2)}</div>
-        </div>
-        <div class="hv-res-card">
-          <div class="hv-res-label">Fiado</div>
-          <div class="hv-res-valor" style="color:var(--rojo)">$${tFiado.toFixed(2)}</div>
-        </div>
-      </div>`;
+    <div class="hv-resumen-wrap">
+      <div class="hv-res-card">
+        <div class="hv-res-label">Total</div>
+        <div class="hv-res-valor">$${tTotal.toFixed(2)}</div>
+      </div>
+      <div class="hv-res-card">
+        <div class="hv-res-label">Pagado</div>
+        <div class="hv-res-valor" style="color:var(--verde)">$${tPagado.toFixed(2)}</div>
+      </div>
+      <div class="hv-res-card">
+        <div class="hv-res-label">Fiado</div>
+        <div class="hv-res-valor" style="color:var(--rojo)">$${tFiado.toFixed(2)}</div>
+      </div>
+    </div>`;
 
   lst.innerHTML =
     todasVentas
@@ -2245,26 +2180,25 @@ function dibujarHistVentas(rango) {
           .map((p) => `${p.cantidad} × ${p.recetaNombre}`)
           .join(", ");
         return `
-        <div class="hv-item">
-          <div class="hv-header">
-            <div>
-              <div class="hv-cli">${v.clienteNombre}</div>
-              <div class="hv-tipo">${TIPOS[v.clienteTipo] || ""}</div>
-            </div>
-            <div style="text-align:right">
-              <div class="hv-fecha">${v.fecha || ""}</div>
-              <div class="hv-total ${v.pago}">$${v.total.toFixed(2)}</div>
-            </div>
+      <div class="hv-item">
+        <div class="hv-header">
+          <div>
+            <div class="hv-cli">${v.clienteNombre}</div>
+            <div class="hv-tipo">${TIPOS[v.clienteTipo] || ""}</div>
           </div>
-          <div style="font-size:.79rem;color:var(--texto-s)">
-            🍞 ${resumen}${v.nota ? " · " + v.nota : ""}
+          <div style="text-align:right">
+            <div class="hv-fecha">${v.fecha || ""}</div>
+            <div class="hv-total ${v.pago}">$${v.total.toFixed(2)}</div>
           </div>
-        </div>`;
+        </div>
+        <div style="font-size:.79rem;color:var(--texto-s)">
+          🍞 ${resumen}${v.nota ? " · " + v.nota : ""}
+        </div>
+      </div>`;
       })
       .join("") +
     (todasVentas.length > 30
-      ? `<p style="font-size:.73rem;color:var(--texto-s);text-align:center;padding:8px 0">
-           Mostrando 30 de ${todasVentas.length} ventas</p>`
+      ? `<p style="font-size:.73rem;color:var(--texto-s);text-align:center;padding:8px 0">Mostrando 30 de ${todasVentas.length} ventas</p>`
       : "");
 }
 
@@ -2273,7 +2207,6 @@ function dibujarHistVentas(rango) {
 // ══════════════════════════════════════════════════
 
 function dibujarRankings() {
-  // — Ranking de mejores clientes —
   const rankCli = clientes
     .map((cli) => {
       const total = (cli.ventas || []).reduce((t, v) => {
@@ -2295,8 +2228,7 @@ function dibujarRankings() {
   const elRC = document.getElementById("cli-ranking");
   if (elRC) {
     elRC.innerHTML = !rankCli.length
-      ? `<div class="vacio"><div class="vacio-icono">🏆</div>
-           <p>Registra ventas para ver el ranking.</p></div>`
+      ? `<div class="vacio"><div class="vacio-icono">🏆</div><p>Registra ventas para ver el ranking.</p></div>`
       : rankCli
           .map(
             (cl, i) => `
@@ -2315,7 +2247,6 @@ function dibujarRankings() {
           .join("");
   }
 
-  // — Panes más vendidos a clientes —
   const porPan = {};
   clientes.forEach((cli) => {
     (cli.ventas || []).forEach((v) => {
@@ -2342,8 +2273,7 @@ function dibujarRankings() {
   const elRP = document.getElementById("cli-panes-ranking");
   if (elRP) {
     elRP.innerHTML = !rankPan.length
-      ? `<div class="vacio"><div class="vacio-icono">🍞</div>
-           <p>Registra ventas para ver los panes favoritos.</p></div>`
+      ? `<div class="vacio"><div class="vacio-icono">🍞</div><p>Registra ventas para ver los panes favoritos.</p></div>`
       : rankPan
           .map(
             ([nom, data], i) => `
@@ -2389,7 +2319,6 @@ window.exportarCSV = function () {
       ]);
     });
   });
-
   const csv = filas.map((f) => f.join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -2403,17 +2332,13 @@ window.exportarCSV = function () {
 
 // ══════════════════════════════════════════════════
 // 18. LISTENERS DE FIREBASE (onSnapshot)
-//     Cada uno escucha cambios en tiempo real y
-//     actualiza el array en memoria + redibuja la UI
 // ══════════════════════════════════════════════════
 
-// — Ingredientes —
 onSnapshot(
   query(collection(db, "ingredientes"), orderBy("creadoEn", "asc")),
   (snap) => {
     ingredientes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     dibujarIngs();
-    // Redibujar recetas también porque el costo depende de los ingredientes
     if (document.getElementById("tab-recetas").classList.contains("activa"))
       dibujarRecs();
     syncOk();
@@ -2421,7 +2346,6 @@ onSnapshot(
   () => syncErr(),
 );
 
-// — Recetas —
 onSnapshot(
   query(collection(db, "recetas"), orderBy("creadoEn", "asc")),
   (snap) => {
@@ -2434,7 +2358,7 @@ onSnapshot(
   () => syncErr(),
 );
 
-// — Historial de producción —
+// ✅ Historial ordenado por fecha (funciona con Date y Timestamp)
 onSnapshot(
   query(collection(db, "historial"), orderBy("fecha", "asc")),
   (snap) => {
@@ -2446,7 +2370,6 @@ onSnapshot(
   () => syncErr(),
 );
 
-// — Clientes —
 onSnapshot(
   query(collection(db, "clientes"), orderBy("creadoEn", "asc")),
   (snap) => {
@@ -2464,9 +2387,13 @@ onSnapshot(
 // 19. INICIALIZACIÓN AL CARGAR
 // ══════════════════════════════════════════════════
 
-// Fecha por defecto en el input de venta
+// Fecha por defecto en venta de cliente
 const inputFecha = document.getElementById("vta-fecha");
 if (inputFecha) inputFecha.value = hoyParaInput();
+
+// ✅ Fecha por defecto en producción (hoy, pero editable)
+const inputFechaProd = document.getElementById("prod-fecha");
+if (inputFechaProd) inputFechaProd.value = hoyParaInput();
 
 // Primera fila de venta multi-pan
 agregarFilaVentaInicial();

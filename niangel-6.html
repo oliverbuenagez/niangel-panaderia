@@ -265,6 +265,13 @@
                 />
               </div>
 
+              <!-- ✅ NUEVO: Campo de fecha manual -->
+              <div class="campo">
+                <label for="prod-fecha">Fecha de producción</label>
+                <input type="date" id="prod-fecha" />
+                <p class="campo-ayuda">Puedes elegir una fecha anterior si olvidaste registrarla</p>
+              </div>
+
               <button class="btn btn-dorado" onclick="calcularProd()">
                 Calcular y guardar
               </button>
@@ -697,7 +704,7 @@
               </div>
             </div>
 
-            <!-- 6F: Ranking global de clientes y panes (en stats de clientes) -->
+            <!-- 6F: Ranking global de clientes y panes -->
             <div class="card">
               <div class="card-titulo">🏆 Ranking de Clientes</div>
               <div id="cli-ranking">
@@ -743,8 +750,7 @@
     </div>
 
     <!-- ══════════════════════════════════════════
-       MODAL DE EDICIÓN (ingredientes, recetas,
-       producción, ventas, clientes)
+       MODAL DE EDICIÓN
   ══════════════════════════════════════════ -->
     <div
       id="modal-editar-overlay"
@@ -753,7 +759,6 @@
     >
       <div class="modal modal-grande" onclick="event.stopPropagation()">
         <div class="modal-titulo" id="modal-editar-titulo">Editar</div>
-        <!-- Contenido dinámico según lo que se edite -->
         <div id="modal-editar-body"></div>
         <div class="modal-acciones">
           <button class="btn btn-gris" onclick="cerrarModalEditar()">

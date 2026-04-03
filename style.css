@@ -355,6 +355,15 @@ nav::-webkit-scrollbar {
   margin-bottom: 5px;
 }
 
+/* ✅ NUEVO: texto de ayuda debajo de un campo */
+.campo-ayuda {
+  font-size: 0.68rem;
+  color: var(--texto-s);
+  margin-top: 5px;
+  line-height: 1.4;
+  font-style: italic;
+}
+
 input,
 select {
   width: 100%;
@@ -412,7 +421,7 @@ input::placeholder {
   flex: 1;
 }
 
-/* Fecha de venta */
+/* Fecha */
 input[type="date"] {
   color-scheme: light;
 }
@@ -549,7 +558,7 @@ input[type="date"] {
   color: white;
 }
 
-/* Tamaños pequeños (para botones dentro de listas) */
+/* Tamaños pequeños */
 .btn-sm {
   padding: 5px 10px;
   font-size: 0.72rem;
@@ -558,7 +567,7 @@ input[type="date"] {
 }
 
 /* ─────────────────────────────────────────────────
-     9. LISTA DE ITEMS (ingredientes, historial, etc.)
+     9. LISTA DE ITEMS
   ───────────────────────────────────────────────── */
 .lista {
   display: flex;
@@ -649,7 +658,7 @@ input[type="date"] {
   color: var(--verde);
 }
 
-/* Barra de porcentaje (rankings) */
+/* Barra de porcentaje */
 .barra-wrap {
   background: var(--crema-o);
   border-radius: 20px;
@@ -677,7 +686,6 @@ input[type="date"] {
   box-shadow: var(--sombra);
 }
 
-/* Cabecera clickeable */
 .receta-header {
   display: flex;
   align-items: center;
@@ -723,7 +731,6 @@ input[type="date"] {
   transform: rotate(180deg);
 }
 
-/* Cuerpo del acordeón */
 .receta-body {
   padding: 15px;
   display: none;
@@ -733,7 +740,6 @@ input[type="date"] {
   display: block;
 }
 
-/* Fila de ingrediente dentro de receta */
 .ing-fila {
   display: flex;
   align-items: center;
@@ -764,7 +770,6 @@ input[type="date"] {
   margin-left: auto;
 }
 
-/* Form para agregar ingrediente a receta */
 .agregar-ing-rec {
   display: flex;
   gap: 8px;
@@ -781,7 +786,6 @@ input[type="date"] {
 /* ─────────────────────────────────────────────────
      11. HISTORIAL DE PRODUCCIÓN
   ───────────────────────────────────────────────── */
-/* Resumen (3 tarjetas: inversión / ventas / ganancia) */
 .hist-resumen {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -812,7 +816,6 @@ input[type="date"] {
   color: var(--dorado-b);
 }
 
-/* Item de historial individual */
 .hist-item {
   display: flex;
   align-items: center;
@@ -865,7 +868,6 @@ input[type="date"] {
 /* ─────────────────────────────────────────────────
      12. ESTADÍSTICAS
   ───────────────────────────────────────────────── */
-/* Cuatro tarjetas resumen */
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -883,7 +885,6 @@ input[type="date"] {
   overflow: hidden;
 }
 
-/* Línea inferior de color por tipo */
 .stat-card::after {
   content: "";
   position: absolute;
@@ -932,7 +933,6 @@ input[type="date"] {
 /* ─────────────────────────────────────────────────
      13. CLIENTES
   ───────────────────────────────────────────────── */
-/* Panel de alertas */
 .alerta-item {
   display: flex;
   align-items: center;
@@ -955,7 +955,6 @@ input[type="date"] {
   font-weight: 600;
 }
 
-/* Acordeón de cliente */
 .cliente-card {
   background: var(--blanco);
   border-radius: var(--r-lg);
@@ -965,7 +964,6 @@ input[type="date"] {
   box-shadow: var(--sombra);
 }
 
-/* Cabecera del cliente (clickeable) */
 .cliente-header {
   display: flex;
   align-items: center;
@@ -1022,7 +1020,6 @@ input[type="date"] {
   letter-spacing: 0.4px;
 }
 
-/* Badges de estado del cliente */
 .badge-estado {
   padding: 3px 11px;
   border-radius: 20px;
@@ -1048,7 +1045,6 @@ input[type="date"] {
   color: var(--verde);
 }
 
-/* Cuerpo expandido del cliente */
 .cliente-body {
   padding: 14px 15px;
   display: none;
@@ -1058,7 +1054,6 @@ input[type="date"] {
   display: block;
 }
 
-/* Mini estadísticas del cliente (3 celdas) */
 .cli-mini-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1089,7 +1084,6 @@ input[type="date"] {
   margin-top: 2px;
 }
 
-/* Tabs del cliente (Ventas / Deudas / Regulares / Stats) */
 .cli-tabs {
   display: flex;
   gap: 4px;
@@ -1123,7 +1117,6 @@ input[type="date"] {
   color: var(--crema-o);
 }
 
-/* Item de venta dentro del perfil del cliente */
 .venta-item {
   display: flex;
   align-items: flex-start;
@@ -1162,7 +1155,6 @@ input[type="date"] {
   color: var(--rojo);
 }
 
-/* Item de deuda */
 .deuda-item {
   display: flex;
   align-items: center;
@@ -1186,7 +1178,6 @@ input[type="date"] {
   color: var(--texto-s);
   margin-top: 2px;
 }
-
 .deuda-monto {
   font-family: "Cormorant Garamond", serif;
   font-size: 1.1rem;
@@ -1194,7 +1185,6 @@ input[type="date"] {
   color: var(--rojo);
 }
 
-/* Item de pedido regular */
 .regular-item {
   display: flex;
   align-items: center;
@@ -1230,7 +1220,6 @@ input[type="date"] {
   font-weight: 700;
 }
 
-/* Días de la semana (selector) */
 .dias-wrap {
   display: flex;
   gap: 5px;
@@ -1262,7 +1251,6 @@ input[type="date"] {
   color: var(--crema-o);
 }
 
-/* Historial general de ventas (resumen pagado/fiado) */
 .hv-resumen-wrap {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1293,7 +1281,6 @@ input[type="date"] {
   margin-top: 3px;
 }
 
-/* Item de historial de ventas global */
 .hv-item {
   padding: 10px 13px;
   background: var(--blanco);
@@ -1405,13 +1392,12 @@ input[type="date"] {
   flex: 1;
 }
 
-/* Campos dentro del modal de edición */
 #modal-editar-body .campo {
   margin-bottom: 12px;
 }
 
 /* ─────────────────────────────────────────────────
-     15. TOAST (notificación temporal)
+     15. TOAST
   ───────────────────────────────────────────────── */
 #toast {
   position: fixed;
@@ -1474,14 +1460,12 @@ input[type="date"] {
 /* ─────────────────────────────────────────────────
      17. UTILIDADES
   ───────────────────────────────────────────────── */
-/* Divider */
 .divider {
   height: 1px;
   background: var(--borde);
   margin: 13px 0;
 }
 
-/* Badge de conteo */
 .badge {
   font-family: "DM Sans", sans-serif;
   font-size: 0.63rem;
@@ -1492,7 +1476,6 @@ input[type="date"] {
   font-weight: 700;
 }
 
-/* Filtros de periodo (Hoy / Semana / Mes / Todo) */
 .filtros {
   display: flex;
   gap: 7px;
@@ -1528,7 +1511,6 @@ input[type="date"] {
   color: var(--crema-o);
 }
 
-/* Info de producción escalada */
 .prod-escala-info {
   background: rgba(201, 153, 58, 0.1);
   border: 1px solid rgba(201, 153, 58, 0.3);
@@ -1540,7 +1522,6 @@ input[type="date"] {
   line-height: 1.5;
 }
 
-/* Tabla de ingredientes (resultado de producción) */
 .tabla {
   width: 100%;
   border-collapse: collapse;
@@ -1569,7 +1550,6 @@ input[type="date"] {
   background: var(--crema);
 }
 
-/* Nota de texto secundaria dentro del modal */
 .nota-sec {
   font-size: 0.73rem;
   color: var(--texto-s);

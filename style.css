@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════
-   NIANGEL v6 — CSS
+   NIANGEL v6.1 — CSS COMPLETO
    Fuentes: DM Serif Display (títulos) + Inter (texto)
-   Estructura:
+   Secciones:
      1.  Variables
      2.  Reset y base
      3.  Layout general
@@ -11,22 +11,21 @@
      7.  Formularios
      8.  Botones
      9.  Items y listas
-    10.  Recetas (acordeón)
+    10.  Recetas
     11.  Historial de producción
     12.  Estadísticas
-    13.  Clientes — nueva interfaz
-    14.  Panel de tabs (derecha)
+    13.  Clientes
+    14.  Panel de tabs
     15.  Modales
     16.  Toast
     17.  Estados vacíos y cargando
     18.  Utilidades
     19.  Animaciones
     20.  Responsive
+    21.  LOGIN PIN
 ═══════════════════════════════════════════════════ */
 
-/* ─────────────────────────────────────────────────
-   1. VARIABLES
-───────────────────────────────────────────────── */
+/* ─── 1. VARIABLES ─── */
 :root {
   --negro: #0d0a07;
   --oscuro: #1a1208;
@@ -61,9 +60,7 @@
   --trans: 0.2s ease;
 }
 
-/* ─────────────────────────────────────────────────
-   2. RESET Y BASE
-───────────────────────────────────────────────── */
+/* ─── 2. RESET Y BASE ─── */
 *,
 *::before,
 *::after {
@@ -87,9 +84,7 @@ body {
   line-height: 1.5;
 }
 
-/* ─────────────────────────────────────────────────
-   3. LAYOUT GENERAL
-───────────────────────────────────────────────── */
+/* ─── 3. LAYOUT GENERAL ─── */
 main {
   flex: 1;
   max-width: 980px;
@@ -104,9 +99,7 @@ main {
   gap: 0;
 }
 
-/* ─────────────────────────────────────────────────
-   4. HEADER Y NAVEGACIÓN
-───────────────────────────────────────────────── */
+/* ─── 4. HEADER Y NAVEGACIÓN ─── */
 header {
   background: var(--negro);
   position: sticky;
@@ -178,7 +171,6 @@ header {
   transition: background var(--trans);
   flex-shrink: 0;
 }
-
 #sync-dot.ok {
   background: var(--verde);
 }
@@ -236,9 +228,7 @@ nav::-webkit-scrollbar {
   background: rgba(201, 153, 58, 0.06);
 }
 
-/* ─────────────────────────────────────────────────
-   5. SECCIONES
-───────────────────────────────────────────────── */
+/* ─── 5. SECCIONES ─── */
 .seccion {
   display: none;
   animation: subir 0.26s ease;
@@ -265,7 +255,6 @@ nav::-webkit-scrollbar {
   margin-top: 3px;
 }
 
-/* Fila cabecera con título + botón */
 .pag-header-row {
   display: flex;
   align-items: center;
@@ -282,9 +271,7 @@ nav::-webkit-scrollbar {
   font-size: 0.84rem !important;
 }
 
-/* ─────────────────────────────────────────────────
-   6. CARDS
-───────────────────────────────────────────────── */
+/* ─── 6. CARDS ─── */
 .card {
   background: #ffffff;
   border-radius: var(--r-xl);
@@ -327,9 +314,7 @@ nav::-webkit-scrollbar {
   line-height: 1.5;
 }
 
-/* ─────────────────────────────────────────────────
-   7. FORMULARIOS
-───────────────────────────────────────────────── */
+/* ─── 7. FORMULARIOS ─── */
 .campo {
   margin-bottom: 11px;
 }
@@ -410,7 +395,6 @@ input[type="date"] {
   flex: 1;
 }
 
-/* Filas dinámicas venta multi-pan */
 .vta-fila {
   display: flex;
   gap: 7px;
@@ -452,9 +436,7 @@ input[type="date"] {
   color: var(--dorado-b);
 }
 
-/* ─────────────────────────────────────────────────
-   8. BOTONES
-───────────────────────────────────────────────── */
+/* ─── 8. BOTONES ─── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -470,7 +452,6 @@ input[type="date"] {
   transition: all var(--trans);
   width: 100%;
 }
-
 .btn:active {
   transform: scale(0.97);
 }
@@ -540,9 +521,7 @@ input[type="date"] {
   width: auto;
 }
 
-/* ─────────────────────────────────────────────────
-   9. ITEMS Y LISTAS
-───────────────────────────────────────────────── */
+/* ─── 9. ITEMS Y LISTAS ─── */
 .lista {
   display: flex;
   flex-direction: column;
@@ -567,21 +546,18 @@ input[type="date"] {
   display: block;
   font-weight: 600;
 }
-
 .item .info span {
   font-size: 0.73rem;
   color: var(--texto-s);
   margin-top: 1px;
   display: block;
 }
-
 .item .acciones {
   display: flex;
   gap: 5px;
   flex-shrink: 0;
 }
 
-/* Ranking */
 .ranking-item {
   display: flex;
   align-items: center;
@@ -606,7 +582,6 @@ input[type="date"] {
   font-weight: 700;
   flex-shrink: 0;
 }
-
 .ranking-num.oro {
   background: linear-gradient(135deg, var(--dorado), var(--dorado-b));
   color: var(--negro);
@@ -639,7 +614,6 @@ input[type="date"] {
   margin-top: 4px;
   overflow: hidden;
 }
-
 .barra-fill {
   height: 100%;
   border-radius: 20px;
@@ -647,9 +621,7 @@ input[type="date"] {
   transition: width 0.4s ease;
 }
 
-/* ─────────────────────────────────────────────────
-   10. RECETAS — Acordeón
-───────────────────────────────────────────────── */
+/* ─── 10. RECETAS ─── */
 .receta-card {
   background: var(--blanco);
   border-radius: var(--r-lg);
@@ -670,7 +642,6 @@ input[type="date"] {
   transition: background var(--trans);
   gap: 10px;
 }
-
 .receta-header:hover,
 .receta-header.abierto {
   background: var(--crema-o);
@@ -685,13 +656,11 @@ input[type="date"] {
   color: var(--cafe-rico);
   font-weight: 600;
 }
-
 .receta-meta {
   font-size: 0.71rem;
   color: var(--texto-s);
   margin-top: 2px;
 }
-
 .receta-chevron {
   color: var(--cafe-claro);
   font-size: 0.78rem;
@@ -750,9 +719,7 @@ input[type="date"] {
   min-width: 85px;
 }
 
-/* ─────────────────────────────────────────────────
-   11. HISTORIAL DE PRODUCCIÓN
-───────────────────────────────────────────────── */
+/* ─── 11. HISTORIAL DE PRODUCCIÓN ─── */
 .hist-resumen {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -766,7 +733,6 @@ input[type="date"] {
   padding: 12px 10px;
   text-align: center;
 }
-
 .hist-label {
   font-size: 0.59rem;
   font-weight: 600;
@@ -774,7 +740,6 @@ input[type="date"] {
   letter-spacing: 0.9px;
   color: rgba(240, 230, 208, 0.55);
 }
-
 .hist-valor {
   font-family: "DM Serif Display", serif;
   font-size: 1.25rem;
@@ -796,7 +761,6 @@ input[type="date"] {
   gap: 8px;
   animation: subir 0.18s ease;
 }
-
 .hist-fecha {
   font-size: 0.67rem;
   color: var(--texto-s);
@@ -804,7 +768,6 @@ input[type="date"] {
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
-
 .hist-pan {
   font-family: "DM Serif Display", serif;
   font-size: 1.02rem;
@@ -812,13 +775,11 @@ input[type="date"] {
   font-weight: 600;
   margin-top: 1px;
 }
-
 .hist-detalle {
   font-size: 0.72rem;
   color: var(--texto-s);
   margin-top: 1px;
 }
-
 .hist-ganancia {
   font-family: "DM Serif Display", serif;
   font-size: 1.2rem;
@@ -831,9 +792,7 @@ input[type="date"] {
   color: var(--rojo);
 }
 
-/* ─────────────────────────────────────────────────
-   12. ESTADÍSTICAS
-───────────────────────────────────────────────── */
+/* ─── 12. ESTADÍSTICAS ─── */
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -859,7 +818,6 @@ input[type="date"] {
   right: 0;
   height: 3px;
 }
-
 .sc-dorado::after {
   background: var(--dorado);
 }
@@ -886,7 +844,6 @@ input[type="date"] {
   letter-spacing: 0.7px;
   color: var(--cafe);
 }
-
 .stat-valor {
   font-family: "DM Serif Display", serif;
   font-size: 1.7rem;
@@ -896,25 +853,19 @@ input[type="date"] {
   letter-spacing: -0.3px;
   line-height: 1.1;
 }
-
 .sc-verde .stat-valor {
   color: var(--verde);
 }
 .sc-rojo .stat-valor {
   color: var(--rojo);
 }
-
 .stat-sub {
   font-size: 0.62rem;
   color: var(--texto-s);
   margin-top: 2px;
 }
 
-/* ─────────────────────────────────────────────────
-   13. CLIENTES — Nueva interfaz
-───────────────────────────────────────────────── */
-
-/* Banda de alerta compacta */
+/* ─── 13. CLIENTES ─── */
 .alerta-banda {
   display: flex;
   align-items: center;
@@ -927,13 +878,11 @@ input[type="date"] {
   font-size: 0.82rem;
   color: var(--cafe-rico);
 }
-
 .alerta-banda-ico {
   font-size: 0.95rem;
   flex-shrink: 0;
 }
 
-/* Acordeón de cliente */
 .cliente-card {
   background: var(--blanco);
   border-radius: var(--r-lg);
@@ -979,7 +928,6 @@ input[type="date"] {
   flex: 1;
   min-width: 0;
 }
-
 .cliente-nombre {
   font-weight: 700;
   font-size: 1rem;
@@ -988,7 +936,6 @@ input[type="date"] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .cliente-tipo {
   font-size: 0.67rem;
   color: var(--texto-s);
@@ -1003,11 +950,6 @@ input[type="date"] {
   font-size: 0.68rem;
   font-weight: 700;
   white-space: nowrap;
-}
-
-.badge-debe {
-  background: var(--rojo-l);
-  color: var(--rojo);
 }
 .badge-al-dia {
   background: var(--verde-l);
@@ -1032,14 +974,12 @@ input[type="date"] {
   gap: 6px;
   margin-bottom: 11px;
 }
-
 .cli-mini-stat {
   background: #e8d9c4;
   border-radius: var(--r-md);
   padding: 7px 6px;
   text-align: center;
 }
-
 .cli-mini-label {
   font-size: 0.57rem;
   color: var(--texto-s);
@@ -1047,7 +987,6 @@ input[type="date"] {
   letter-spacing: 0.4px;
   font-weight: 600;
 }
-
 .cli-mini-valor {
   font-family: "DM Serif Display", serif;
   font-size: 1.05rem;
@@ -1056,7 +995,6 @@ input[type="date"] {
   margin-top: 1px;
 }
 
-/* Tabs del cliente */
 .cli-tabs {
   display: flex;
   gap: 3px;
@@ -1088,7 +1026,6 @@ input[type="date"] {
   color: var(--crema-o);
 }
 
-/* Venta item */
 .venta-item {
   display: flex;
   align-items: flex-start;
@@ -1101,7 +1038,6 @@ input[type="date"] {
   gap: 8px;
   animation: subir 0.18s ease;
 }
-
 .vi-pan {
   font-weight: 600;
   font-size: 0.85rem;
@@ -1122,42 +1058,7 @@ input[type="date"] {
 .vi-monto.pagado {
   color: var(--verde);
 }
-.vi-monto.fiado {
-  color: var(--rojo);
-}
 
-/* Deuda item */
-.deuda-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 11px;
-  background: #e8d9c4;
-  border-radius: var(--r-md);
-  border: 1px solid var(--borde);
-  margin-bottom: 6px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.deuda-desc {
-  font-size: 0.82rem;
-  color: var(--cafe-rico);
-  font-weight: 500;
-}
-.deuda-fecha {
-  font-size: 0.67rem;
-  color: var(--texto-s);
-  margin-top: 1px;
-}
-.deuda-monto {
-  font-family: "DM Serif Display", serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--rojo);
-}
-
-/* Historial general — items */
 .hv-item {
   padding: 9px 12px;
   background: var(--blanco);
@@ -1166,14 +1067,12 @@ input[type="date"] {
   margin-bottom: 6px;
   animation: subir 0.18s ease;
 }
-
 .hv-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 4px;
 }
-
 .hv-cli {
   font-weight: 700;
   font-size: 0.92rem;
@@ -1196,18 +1095,13 @@ input[type="date"] {
 .hv-total.pagado {
   color: var(--verde);
 }
-.hv-total.fiado {
-  color: var(--rojo);
-}
 
-/* Resumen historial ventas */
 .hv-resumen-wrap {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 7px;
   margin-bottom: 11px;
 }
-
 .hv-res-card {
   background: #e8d9c4;
   border-radius: var(--r-md);
@@ -1215,7 +1109,6 @@ input[type="date"] {
   text-align: center;
   border: 1px solid var(--borde);
 }
-
 .hv-res-label {
   font-size: 0.59rem;
   font-weight: 600;
@@ -1231,9 +1124,7 @@ input[type="date"] {
   margin-top: 2px;
 }
 
-/* ─────────────────────────────────────────────────
-   14. PANEL DE TABS (columna derecha de Clientes)
-───────────────────────────────────────────────── */
+/* ─── 14. PANEL DE TABS ─── */
 .panel-tabs-card {
   padding: 0;
   overflow: hidden;
@@ -1280,9 +1171,7 @@ input[type="date"] {
   padding: 16px;
 }
 
-/* ─────────────────────────────────────────────────
-   15. MODALES
-───────────────────────────────────────────────── */
+/* ─── 15. MODALES ─── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -1294,7 +1183,6 @@ input[type="date"] {
   justify-content: center;
   padding: 16px;
 }
-
 .modal-overlay.visible {
   display: flex;
 }
@@ -1314,13 +1202,11 @@ input[type="date"] {
   max-height: 88vh;
   overflow-y: auto;
 }
-
 .modal-icono {
   font-size: 2.2rem;
   text-align: center;
   margin-bottom: 8px;
 }
-
 .modal-titulo {
   font-family: "DM Serif Display", serif;
   font-size: 1.25rem;
@@ -1329,7 +1215,6 @@ input[type="date"] {
   text-align: center;
   margin-bottom: 5px;
 }
-
 .modal-desc {
   font-size: 0.82rem;
   color: var(--texto-s);
@@ -1337,7 +1222,6 @@ input[type="date"] {
   margin-bottom: 20px;
   line-height: 1.55;
 }
-
 .modal-acciones {
   display: flex;
   gap: 9px;
@@ -1346,13 +1230,8 @@ input[type="date"] {
 .modal-acciones .btn {
   flex: 1;
 }
-#modal-editar-body .campo {
-  margin-bottom: 11px;
-}
 
-/* ─────────────────────────────────────────────────
-   16. TOAST
-───────────────────────────────────────────────── */
+/* ─── 16. TOAST ─── */
 #toast {
   position: fixed;
   bottom: 22px;
@@ -1370,20 +1249,16 @@ input[type="date"] {
   white-space: nowrap;
   pointer-events: none;
 }
-
 #toast.visible {
   transform: translateX(-50%) translateY(0);
 }
 
-/* ─────────────────────────────────────────────────
-   17. ESTADOS VACÍO Y CARGANDO
-───────────────────────────────────────────────── */
+/* ─── 17. ESTADOS VACÍO Y CARGANDO ─── */
 .vacio {
   text-align: center;
   padding: 26px 14px;
   color: var(--texto-s);
 }
-
 .vacio-icono {
   font-size: 2rem;
   margin-bottom: 7px;
@@ -1410,9 +1285,7 @@ input[type="date"] {
   margin: 0 auto 9px;
 }
 
-/* ─────────────────────────────────────────────────
-   18. UTILIDADES
-───────────────────────────────────────────────── */
+/* ─── 18. UTILIDADES ─── */
 .divider {
   height: 1px;
   background: var(--borde);
@@ -1507,9 +1380,7 @@ input[type="date"] {
   margin-top: 11px;
 }
 
-/* ─────────────────────────────────────────────────
-   19. ANIMACIONES
-───────────────────────────────────────────────── */
+/* ─── 19. ANIMACIONES ─── */
 @keyframes subir {
   from {
     opacity: 0;
@@ -1544,16 +1415,31 @@ input[type="date"] {
     transform: scale(1);
   }
 }
+@keyframes sacudir {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
 
-/* ─────────────────────────────────────────────────
-   20. RESPONSIVE
-───────────────────────────────────────────────── */
+/* ─── 20. RESPONSIVE ─── */
 @media (min-width: 500px) {
   .stats-grid {
     grid-template-columns: repeat(4, 1fr);
   }
 }
-
 @media (min-width: 680px) {
   main {
     padding: 30px 24px 100px;
@@ -1568,9 +1454,147 @@ input[type="date"] {
     grid-template-columns: repeat(3, 1fr);
   }
 }
-
 @media (min-width: 900px) {
   .pag-header h2 {
     font-size: 1.95rem;
   }
+}
+
+/* ─── 21. LOGIN PIN ─── */
+#login-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--negro);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+#login-screen.oculto {
+  display: none;
+}
+
+#login-card {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#login-logo {
+  font-size: 3rem;
+  margin-bottom: 10px;
+  animation: subir 0.4s ease;
+}
+
+#login-titulo {
+  font-family: "DM Serif Display", serif;
+  font-size: 2rem;
+  color: var(--crema-o);
+  letter-spacing: 5px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+#login-subtitulo {
+  font-size: 0.72rem;
+  color: var(--dorado);
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  font-weight: 500;
+  margin-bottom: 36px;
+}
+
+#login-puntos {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.punto {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(201, 153, 58, 0.4);
+  background: transparent;
+  transition: all 0.15s ease;
+}
+
+.punto.lleno {
+  background: var(--dorado);
+  border-color: var(--dorado);
+  box-shadow: 0 0 8px rgba(201, 153, 58, 0.5);
+}
+
+.punto.error {
+  background: var(--rojo);
+  border-color: var(--rojo);
+  animation: sacudir 0.35s ease;
+}
+
+#login-mensaje {
+  font-size: 0.74rem;
+  color: rgba(240, 230, 208, 0.45);
+  letter-spacing: 0.5px;
+  margin-bottom: 30px;
+  min-height: 18px;
+  transition: color 0.2s ease;
+}
+
+#login-mensaje.error-txt {
+  color: var(--rojo);
+}
+
+#login-teclado {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.tecla {
+  height: 64px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(201, 153, 58, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--crema-o);
+  font-family: "DM Serif Display", serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.tecla:hover {
+  background: rgba(201, 153, 58, 0.12);
+  border-color: rgba(201, 153, 58, 0.4);
+}
+.tecla:active {
+  transform: scale(0.93);
+  background: rgba(201, 153, 58, 0.2);
+}
+
+.tecla-vacia {
+  background: transparent !important;
+  border-color: transparent !important;
+  cursor: default;
+  pointer-events: none;
+}
+
+.tecla-borrar {
+  font-size: 1.1rem;
+  color: rgba(240, 230, 208, 0.5);
+}
+
+.tecla-borrar:hover {
+  color: var(--rojo);
+  border-color: rgba(184, 50, 50, 0.3) !important;
+  background: rgba(184, 50, 50, 0.08) !important;
 }

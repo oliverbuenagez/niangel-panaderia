@@ -4,16 +4,53 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Panadería NIANGEL</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@300;400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="niangel-6.css" />
   </head>
   <body>
-    <!-- ══════════════════════════════════════════
-       HEADER
-  ══════════════════════════════════════════ -->
+    <!-- ══════════════════════════════════════
+     PANTALLA DE LOGIN PIN
+══════════════════════════════════════ -->
+    <div id="login-screen">
+      <div id="login-card">
+        <div id="login-logo">🍞</div>
+        <h1 id="login-titulo">NIANGEL</h1>
+        <p id="login-subtitulo">Control de Panadería</p>
+
+        <div id="login-puntos">
+          <span class="punto" id="p0"></span>
+          <span class="punto" id="p1"></span>
+          <span class="punto" id="p2"></span>
+          <span class="punto" id="p3"></span>
+        </div>
+
+        <p id="login-mensaje">Ingresa tu PIN de 4 dígitos</p>
+
+        <div id="login-teclado">
+          <button class="tecla" onclick="presionarTecla('1')">1</button>
+          <button class="tecla" onclick="presionarTecla('2')">2</button>
+          <button class="tecla" onclick="presionarTecla('3')">3</button>
+          <button class="tecla" onclick="presionarTecla('4')">4</button>
+          <button class="tecla" onclick="presionarTecla('5')">5</button>
+          <button class="tecla" onclick="presionarTecla('6')">6</button>
+          <button class="tecla" onclick="presionarTecla('7')">7</button>
+          <button class="tecla" onclick="presionarTecla('8')">8</button>
+          <button class="tecla" onclick="presionarTecla('9')">9</button>
+          <button class="tecla tecla-vacia"></button>
+          <button class="tecla" onclick="presionarTecla('0')">0</button>
+          <button class="tecla tecla-borrar" onclick="borrarTecla()">⌫</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     APP PRINCIPAL
+══════════════════════════════════════ -->
     <header>
       <div class="header-top">
         <div class="logo">
@@ -51,10 +88,8 @@
     </header>
 
     <main>
-      <!-- ══════════════════════════════
-         MÓDULO 1: INGREDIENTES
-    ══════════════════════════════ -->
-      <section id="tab-ingredientes" class="seccion activa">
+      <!-- ══ INGREDIENTES ══ -->
+      <section class="seccion activa" id="tab-ingredientes">
         <div class="pag-header">
           <h2>📦 Ingredientes</h2>
           <p>
@@ -62,197 +97,171 @@
           </p>
         </div>
         <div class="dos-col">
-          <div>
-            <div class="card">
-              <div class="card-titulo">Nuevo ingrediente</div>
+          <div class="card">
+            <div class="card-titulo">Nuevo ingrediente</div>
+            <div class="campo">
+              <label>Nombre</label>
+              <input
+                type="text"
+                id="ing-nom"
+                placeholder="Ej: Harina de trigo"
+              />
+            </div>
+            <div class="fila">
               <div class="campo">
-                <label for="ing-nom">Nombre</label>
-                <input
-                  type="text"
-                  id="ing-nom"
-                  placeholder="Harina, Azúcar, Huevos..."
-                />
-              </div>
-              <div class="fila">
-                <div class="campo">
-                  <label for="ing-cant">Cantidad</label>
-                  <input
-                    type="number"
-                    id="ing-cant"
-                    placeholder="50"
-                    min="0"
-                    step="any"
-                  />
-                </div>
-                <div class="campo">
-                  <label for="ing-uni">Unidad</label>
-                  <input
-                    type="text"
-                    id="ing-uni"
-                    placeholder="kg, libras, g..."
-                  />
-                </div>
-              </div>
-              <div class="campo">
-                <label for="ing-pre">Precio ($)</label>
+                <label>Cantidad</label>
                 <input
                   type="number"
-                  id="ing-pre"
-                  placeholder="0.00"
-                  step="0.01"
+                  id="ing-cant"
+                  placeholder="1000"
+                  step="any"
                   min="0"
                 />
               </div>
-              <button class="btn btn-oscuro" onclick="agregarIng()">
-                + Agregar ingrediente
-              </button>
-            </div>
-          </div>
-          <div>
-            <div class="card">
-              <div class="card-titulo">
-                Mi Bodega <span class="badge" id="ing-cnt">0</span>
+              <div class="campo">
+                <label>Unidad</label>
+                <input type="text" id="ing-uni" placeholder="g, kg, ml…" />
               </div>
-              <div id="ing-lista">
-                <div class="cargando">
-                  <div class="spinner"></div>
-                  <p>Cargando...</p>
-                </div>
+            </div>
+            <div class="campo">
+              <label>Precio ($)</label>
+              <input
+                type="number"
+                id="ing-pre"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <button class="btn btn-dorado" onclick="agregarIng()">
+              + Agregar ingrediente
+            </button>
+          </div>
+          <div class="card">
+            <div class="card-titulo">
+              Mi Bodega <span class="badge" id="ing-cnt">0</span>
+            </div>
+            <div id="ing-lista">
+              <div class="cargando">
+                <div class="spinner"></div>
+                <p>Cargando...</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ══════════════════════════════
-         MÓDULO 2: RECETAS
-    ══════════════════════════════ -->
-      <section id="tab-recetas" class="seccion">
+      <!-- ══ RECETAS ══ -->
+      <section class="seccion" id="tab-recetas">
         <div class="pag-header">
           <h2>📋 Tipos de Pan</h2>
           <p>Recetas con ingredientes y costos automáticos</p>
         </div>
         <div class="dos-col">
-          <div>
-            <div class="card">
-              <div class="card-titulo">Nueva receta</div>
-              <div class="campo">
-                <label for="rec-nom">Nombre del pan</label>
-                <input
-                  type="text"
-                  id="rec-nom"
-                  placeholder="Pan de Queso, Croissant..."
-                />
-              </div>
-              <div class="campo">
-                <label for="rec-rinde">¿Cuántos panes rinde esta receta?</label>
-                <input
-                  type="number"
-                  id="rec-rinde"
-                  placeholder="Ej: 15"
-                  min="1"
-                  step="1"
-                />
-              </div>
-              <div class="campo">
-                <label for="rec-precio">Precio de venta por pan ($)</label>
-                <input
-                  type="number"
-                  id="rec-precio"
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                />
-              </div>
-              <button class="btn btn-oscuro" onclick="crearRec()">
-                Crear receta
-              </button>
+          <div class="card">
+            <div class="card-titulo">Nueva receta</div>
+            <div class="campo">
+              <label>Nombre del pan</label>
+              <input type="text" id="rec-nom" placeholder="Ej: Pandeyuca" />
             </div>
+            <div class="campo">
+              <label>¿Cuántos panes rinde esta receta?</label>
+              <input
+                type="number"
+                id="rec-rinde"
+                placeholder="12"
+                min="1"
+                step="1"
+              />
+            </div>
+            <div class="campo">
+              <label>Precio de venta por pan ($)</label>
+              <input
+                type="number"
+                id="rec-precio"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <button class="btn btn-dorado" onclick="crearRec()">
+              Crear receta
+            </button>
           </div>
-          <div>
-            <div class="card">
-              <div class="card-titulo">
-                Mis Recetas <span class="badge" id="rec-cnt">0</span>
-              </div>
-              <div id="rec-lista">
-                <div class="cargando">
-                  <div class="spinner"></div>
-                  <p>Cargando...</p>
-                </div>
+          <div class="card">
+            <div class="card-titulo">
+              Mis Recetas <span class="badge" id="rec-cnt">0</span>
+            </div>
+            <div id="rec-lista">
+              <div class="cargando">
+                <div class="spinner"></div>
+                <p>Cargando...</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- ══════════════════════════════
-         MÓDULO 3: PRODUCCIÓN
-    ══════════════════════════════ -->
-      <section id="tab-produccion" class="seccion">
+      <!-- ══ PRODUCCIÓN ══ -->
+      <section class="seccion" id="tab-produccion">
         <div class="pag-header">
           <h2>🍞 Producción del Día</h2>
           <p>Se guarda automáticamente en la nube</p>
         </div>
         <div class="dos-col">
-          <div>
-            <div class="card">
-              <div class="card-titulo">¿Qué pan hiciste hoy?</div>
-              <div class="campo">
-                <label for="prod-fecha">Fecha de producción</label>
-                <input type="date" id="prod-fecha" />
-              </div>
-              <div class="campo">
-                <label for="prod-rec">Tipo de pan</label>
-                <div class="select-wrap">
-                  <select id="prod-rec" onchange="verIngRec()">
-                    <option value="">Selecciona un pan</option>
-                  </select>
-                </div>
-              </div>
-              <div class="campo">
-                <label for="prod-pan">Panes a producir</label>
-                <input
-                  type="number"
-                  id="prod-pan"
-                  placeholder="Ej: 300"
-                  min="1"
-                  oninput="verIngRec()"
-                />
-              </div>
-              <div class="campo">
-                <label for="prod-pre">Precio de venta por pan ($)</label>
-                <input
-                  type="number"
-                  id="prod-pre"
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                />
-              </div>
-              <button class="btn btn-dorado" onclick="calcularProd()">
-                Calcular y guardar
-              </button>
+          <div class="card">
+            <div class="card-titulo">¿Qué pan hiciste hoy?</div>
+            <div class="campo">
+              <label>Fecha de producción</label>
+              <input type="date" id="prod-fecha" />
             </div>
+            <div class="campo">
+              <label>Tipo de pan</label>
+              <div class="select-wrap">
+                <select id="prod-rec" onchange="verIngRec()">
+                  <option value="">Selecciona un pan</option>
+                </select>
+              </div>
+            </div>
+            <div class="campo">
+              <label>Panes a producir</label>
+              <input
+                type="number"
+                id="prod-pan"
+                placeholder="0"
+                min="1"
+                oninput="verIngRec()"
+              />
+            </div>
+            <div class="campo">
+              <label>Precio de venta por pan ($)</label>
+              <input
+                type="number"
+                id="prod-pre"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <button class="btn btn-dorado" onclick="calcularProd()">
+              Calcular y guardar
+            </button>
           </div>
-          <div>
-            <div class="card">
-              <div class="card-titulo">Ingredientes de la receta</div>
-              <div id="prod-det">
-                <div class="vacio">
-                  <div class="vacio-icono">👆</div>
-                  <p>Selecciona un pan para ver sus ingredientes.</p>
-                </div>
+          <div class="card">
+            <div class="card-titulo">Ingredientes de la receta</div>
+            <div id="prod-det">
+              <div class="vacio">
+                <div class="vacio-icono">👆</div>
+                <p>Selecciona un pan para ver sus ingredientes.</p>
               </div>
             </div>
           </div>
         </div>
-        <div id="prod-res" style="display: none"></div>
+        <div id="prod-res" style="display: none; margin-top: 14px"></div>
       </section>
 
-      <!-- ══════════════════════════════
-         MÓDULO 4: HISTORIAL
-    ══════════════════════════════ -->
-      <section id="tab-historial" class="seccion">
+      <!-- ══ HISTORIAL ══ -->
+      <section class="seccion" id="tab-historial">
         <div class="pag-header">
           <h2>📅 Historial de Producción</h2>
           <p>Registro de todas tus producciones</p>
@@ -270,10 +279,7 @@
           <button class="filtro-btn" onclick="filtrarH('todo', this)">
             Todo
           </button>
-          <div
-            class="select-wrap"
-            style="display: inline-block; min-width: 130px"
-          >
+          <div class="select-wrap" style="min-width: 155px">
             <select id="hist-mes-sel" onchange="filtrarHMes(this.value)">
               <option value="">📅 Mes específico</option>
             </select>
@@ -288,10 +294,8 @@
         </div>
       </section>
 
-      <!-- ══════════════════════════════
-         MÓDULO 5: ESTADÍSTICAS
-    ══════════════════════════════ -->
-      <section id="tab-estadisticas" class="seccion">
+      <!-- ══ ESTADÍSTICAS ══ -->
+      <section class="seccion" id="tab-estadisticas">
         <div class="pag-header">
           <h2>📊 Estadísticas</h2>
           <p>Análisis de tu negocio</p>
@@ -309,10 +313,7 @@
           <button class="filtro-btn" onclick="filtrarStats('semana', this)">
             Esta semana
           </button>
-          <div
-            class="select-wrap"
-            style="display: inline-block; min-width: 130px"
-          >
+          <div class="select-wrap" style="min-width: 155px">
             <select id="stats-mes-sel" onchange="filtrarStatsMes(this.value)">
               <option value="">📅 Mes específico</option>
             </select>
@@ -326,82 +327,77 @@
         </div>
       </section>
 
-      <!-- ══════════════════════════════
-         MÓDULO 6: CLIENTES
-         Nueva organización:
-         - Alerta inactivos → banda delgada
-         - Izquierda: lista + buscador + rankings
-         - Derecha: panel con tabs (Registrar / Historial / Rankings)
-         - "Nuevo cliente" → botón que abre modal
-         - SIN sección Pedido Regular
-    ══════════════════════════════ -->
-      <section id="tab-clientes" class="seccion">
+      <!-- ══ CLIENTES ══ -->
+      <section class="seccion" id="tab-clientes">
         <div class="pag-header-row">
           <div class="pag-header" style="margin-bottom: 0">
             <h2>👥 Clientes</h2>
             <p>Historial de compras y análisis</p>
           </div>
-          <!-- Botón nuevo cliente abre modal -->
           <button
-            class="btn btn-oscuro btn-nuevo-cli"
+            class="btn btn-dorado btn-nuevo-cli"
             onclick="abrirModalNuevoCli()"
           >
             + Nuevo cliente
           </button>
         </div>
 
-        <!-- Alerta inactivos: banda compacta -->
-        <div id="cli-alerta-banda" class="alerta-banda" style="display: none">
+        <!-- Alerta inactivos -->
+        <div class="alerta-banda" id="cli-alerta-banda" style="display: none">
           <span class="alerta-banda-ico">🔔</span>
           <span id="cli-alerta-texto"></span>
         </div>
 
-        <!-- Resumen (4 tarjetas) -->
-        <div class="stats-grid" id="cli-resumen">
+        <!-- Resumen -->
+        <div class="stats-grid" style="margin-bottom: 16px">
           <div class="stat-card sc-cafe">
             <div class="stat-label">Clientes</div>
-            <div class="stat-valor" id="cli-cnt">0</div>
+            <div class="stat-valor" id="cli-cnt2">0</div>
           </div>
           <div class="stat-card sc-azul">
             <div class="stat-label">Ventas hoy</div>
             <div class="stat-valor" id="cli-ventas-hoy">0</div>
           </div>
-
           <div class="stat-card sc-verde">
             <div class="stat-label">Este mes</div>
             <div class="stat-valor" id="cli-mes-tot">$0</div>
           </div>
         </div>
 
-        <!-- DOS COLUMNAS PRINCIPALES -->
+        <!-- Búsqueda -->
+        <div class="campo" style="margin-bottom: 12px">
+          <input
+            type="text"
+            placeholder="🔍 Buscar cliente por nombre..."
+            oninput="buscarCli(this.value)"
+          />
+        </div>
+
         <div class="dos-col">
-          <!-- Columna izquierda: lista de clientes -->
+          <!-- Lista de clientes -->
           <div>
-            <div class="card">
-              <div class="card-titulo">
-                Mis Clientes <span class="badge" id="cli-cnt2">0</span>
-              </div>
-              <div class="campo" style="margin-bottom: 12px">
-                <input
-                  type="text"
-                  id="cli-buscar"
-                  placeholder="🔍 Buscar cliente..."
-                  oninput="buscarCli(this.value)"
-                />
-              </div>
-              <div id="cli-lista">
-                <div class="cargando">
-                  <div class="spinner"></div>
-                  <p>Cargando...</p>
-                </div>
+            <div
+              class="card-titulo"
+              style="
+                margin-bottom: 10px;
+                font-family: &quot;DM Serif Display&quot;, serif;
+                font-size: 1rem;
+                color: var(--cafe-rico);
+              "
+            >
+              Mis Clientes <span class="badge" id="cli-cnt">0</span>
+            </div>
+            <div id="cli-lista">
+              <div class="cargando">
+                <div class="spinner"></div>
+                <p>Cargando...</p>
               </div>
             </div>
           </div>
 
-          <!-- Columna derecha: panel con tabs -->
+          <!-- Panel derecho: venta / historial / rankings -->
           <div>
             <div class="card panel-tabs-card">
-              <!-- Tabs del panel derecho -->
               <div class="panel-tabs">
                 <button
                   class="panel-tab activo"
@@ -423,10 +419,10 @@
                 </button>
               </div>
 
-              <!-- TAB: Registrar venta -->
-              <div id="panel-venta" class="panel-tab-body">
+              <!-- Tab Venta -->
+              <div class="panel-tab-body" id="panel-venta">
                 <div class="campo">
-                  <label for="vta-cli">Cliente</label>
+                  <label>Cliente</label>
                   <div class="select-wrap">
                     <select id="vta-cli">
                       <option value="">Selecciona cliente</option>
@@ -434,15 +430,15 @@
                   </div>
                 </div>
                 <div class="campo">
-                  <label for="vta-fecha">Fecha de compra</label>
+                  <label>Fecha de compra</label>
                   <input type="date" id="vta-fecha" />
                 </div>
-                <div class="campo-label">Panes</div>
+                <p class="nota-sec">Panes</p>
                 <div id="vta-filas"></div>
                 <button
                   class="btn btn-gris"
+                  style="margin-bottom: 11px"
                   onclick="agregarFilaVenta()"
-                  style="margin-bottom: 12px"
                 >
                   + Agregar otro pan
                 </button>
@@ -451,18 +447,22 @@
                   <strong id="vta-total-display">$0.00</strong>
                 </div>
                 <div class="campo">
-                  <label for="vta-nota">Nota (opcional)</label>
-                  <input type="text" id="vta-nota" placeholder="Opcional..." />
+                  <label>Nota (opcional)</label>
+                  <input
+                    type="text"
+                    id="vta-nota"
+                    placeholder="Ej: pagó con Nequi"
+                  />
                 </div>
                 <button class="btn btn-dorado" onclick="registrarVenta()">
                   💰 Guardar venta
                 </button>
               </div>
 
-              <!-- TAB: Historial general de ventas -->
+              <!-- Tab Historial -->
               <div
-                id="panel-historial"
                 class="panel-tab-body"
+                id="panel-historial"
                 style="display: none"
               >
                 <div class="filtros filtros-compactos">
@@ -490,10 +490,7 @@
                   >
                     Todo
                   </button>
-                  <div
-                    class="select-wrap"
-                    style="display: inline-block; min-width: 130px"
-                  >
+                  <div class="select-wrap" style="min-width: 145px">
                     <select
                       id="hv-mes-sel"
                       onchange="filtrarHistVentasMes(this.value)"
@@ -511,17 +508,17 @@
                 </div>
                 <button
                   class="btn btn-gris"
+                  style="margin-top: 10px"
                   onclick="exportarCSV()"
-                  style="margin-top: 12px"
                 >
                   📥 Exportar CSV
                 </button>
               </div>
 
-              <!-- TAB: Rankings -->
+              <!-- Tab Rankings -->
               <div
-                id="panel-ranking"
                 class="panel-tab-body"
+                id="panel-ranking"
                 style="display: none"
               >
                 <p class="nota-sec">Mejores clientes</p>
@@ -547,9 +544,9 @@
       </section>
     </main>
 
-    <!-- Modal de confirmación -->
-    <div id="modal-overlay" class="modal-overlay" onclick="cerrarModal()">
-      <div class="modal" onclick="event.stopPropagation()">
+    <!-- ══ MODAL CONFIRMACIÓN ══ -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal">
         <div class="modal-icono" id="modal-icono">⚠️</div>
         <div class="modal-titulo" id="modal-titulo">¿Estás seguro?</div>
         <div class="modal-desc" id="modal-desc">
@@ -564,13 +561,9 @@
       </div>
     </div>
 
-    <!-- Modal de edición -->
-    <div
-      id="modal-editar-overlay"
-      class="modal-overlay"
-      onclick="cerrarModalEditar()"
-    >
-      <div class="modal modal-grande" onclick="event.stopPropagation()">
+    <!-- ══ MODAL EDITAR ══ -->
+    <div class="modal-overlay" id="modal-editar-overlay">
+      <div class="modal modal-grande">
         <div class="modal-titulo" id="modal-editar-titulo">Editar</div>
         <div id="modal-editar-body"></div>
         <div class="modal-acciones">
@@ -584,58 +577,53 @@
       </div>
     </div>
 
-    <!-- Modal nuevo cliente -->
-    <div
-      id="modal-cli-overlay"
-      class="modal-overlay"
-      onclick="cerrarModalNuevoCli()"
-    >
-      <div class="modal" onclick="event.stopPropagation()">
+    <!-- ══ MODAL NUEVO CLIENTE ══ -->
+    <div class="modal-overlay" id="modal-cli-overlay">
+      <div class="modal">
         <div class="modal-icono">👤</div>
         <div class="modal-titulo">Nuevo cliente</div>
         <div class="campo">
-          <label for="cli-nom">Nombre</label>
-          <input type="text" id="cli-nom" placeholder="Tienda Don José..." />
+          <label>Nombre</label>
+          <input type="text" id="cli-nom" placeholder="Nombre del cliente" />
         </div>
-        <div class="fila">
-          <div class="campo">
-            <label for="cli-tip">Tipo</label>
-            <div class="select-wrap">
-              <select id="cli-tip">
-                <option value="tienda">🏪 Tienda</option>
-                <option value="fruver">🥬 Fruver</option>
-                <option value="restaurante">🍽️ Restaurante</option>
-                <option value="cafeteria">☕ Cafetería</option>
-                <option value="ambulante">🛒 Ambulante</option>
-                <option value="panaderia">🍞 Panadería</option>
-                <option value="vecino">🏠 Vecino/Particular</option>
-                <option value="mayorista">📦 Mayorista</option>
-                <option value="otro">👤 Otro</option>
-              </select>
-            </div>
-          </div>
-          <div class="campo">
-            <label for="cli-tel">Teléfono</label>
-            <input type="text" id="cli-tel" placeholder="Opcional" />
+        <div class="campo">
+          <label>Tipo</label>
+          <div class="select-wrap">
+            <select id="cli-tip">
+              <option value="tienda">🏪 Tienda</option>
+              <option value="fruver">🥬 Fruver</option>
+              <option value="restaurante">🍽️ Restaurante</option>
+              <option value="cafeteria">☕ Cafetería</option>
+              <option value="ambulante">🛒 Ambulante</option>
+              <option value="panaderia">🍞 Panadería</option>
+              <option value="vecino">🏠 Vecino/Particular</option>
+              <option value="mayorista">📦 Mayorista</option>
+              <option value="otro">👤 Otro</option>
+            </select>
           </div>
         </div>
         <div class="campo">
-          <label for="cli-dir">Dirección (opcional)</label>
-          <input type="text" id="cli-dir" placeholder="Calle, barrio..." />
+          <label>Teléfono</label>
+          <input type="tel" id="cli-tel" placeholder="300 000 0000" />
+        </div>
+        <div class="campo">
+          <label>Dirección (opcional)</label>
+          <input type="text" id="cli-dir" placeholder="Barrio, calle..." />
         </div>
         <div class="modal-acciones">
           <button class="btn btn-gris" onclick="cerrarModalNuevoCli()">
             Cancelar
           </button>
-          <button class="btn btn-oscuro" onclick="agregarCli()">
+          <button class="btn btn-dorado" onclick="agregarCli()">
             + Agregar
           </button>
         </div>
       </div>
     </div>
 
+    <!-- ══ TOAST ══ -->
     <div id="toast"></div>
 
-    <script type="module" src="proyecto.js"></script>
+    <script type="module" src="niangel-6.js"></script>
   </body>
 </html>

@@ -1061,66 +1061,439 @@ window.editarHist = function (id) {
   });
 };
 
+// ── Helpers del historial mejorado ──────────────────
+function _fechaTS(h) {
+  if (h.fecha && h.fecha.toDate) return h.fecha.toDate();
+  if (typeof h.fecha === "string") return new Date(h.fecha + "T00:00:00");
+  if (typeof h.fecha === "number") return new Date(h.fecha);
+  return new Date(h.fecha);
+}
+
+function _clavesDia(lista) {
+  // Agrupa por día, retorna objeto { 'YYYY-MM-DD': [registros] }
+  const grupos = {};
+  lista.forEach((h) => {
+    const d = _fechaTS(h);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (!grupos[key]) grupos[key] = [];
+    grupos[key].push(h);
+  });
+  return grupos;
+}
+
+function _nombrePeriodoAnterior(rango) {
+  if (rango === "hoy") return "ayer";
+  if (rango === "semana") return "semana pasada";
+  if (rango === "mes") return "mes pasado";
+  return null;
+}
+
+function _filtradoAnterior(rango) {
+  const hoy = new Date();
+  return historial.filter((h) => {
+    const d = _fechaTS(h);
+    if (rango === "hoy") {
+      const ayer = new Date();
+      ayer.setDate(hoy.getDate() - 1);
+      return d.toDateString() === ayer.toDateString();
+    }
+    if (rango === "semana") {
+      const ini = new Date();
+      ini.setDate(hoy.getDate() - 14);
+      const fin = new Date();
+      fin.setDate(hoy.getDate() - 7);
+      return d >= ini && d < fin;
+    }
+    if (rango === "mes") {
+      const mes = hoy.getMonth() === 0 ? 11 : hoy.getMonth() - 1;
+      const anio =
+        hoy.getMonth() === 0 ? hoy.getFullYear() - 1 : hoy.getFullYear();
+      return d.getMonth() === mes && d.getFullYear() === anio;
+    }
+    return false;
+  });
+}
+
+function _fmt(n) {
+  return "$" + Math.round(n || 0).toLocaleString("es-CO");
+}
+
+function _delta(actual, anterior) {
+  if (!anterior || anterior === 0) return { txt: "nuevo", cls: "delta-igual" };
+  const pct = ((actual - anterior) / Math.abs(anterior)) * 100;
+  if (Math.abs(pct) < 1) return { txt: "= igual", cls: "delta-igual" };
+  const signo = pct > 0 ? "▲" : "▼";
+  const cls = pct > 0 ? "delta-sube" : "delta-baja";
+  return { txt: `${signo} ${Math.abs(pct).toFixed(0)}%`, cls };
+}
+
+// ── Función principal ────────────────────────────────
 function dibujarHist(rango, mesEsp) {
-  const filtrados = (
+  // Datos del periodo actual
+  const filtrados =
     rango === "mes-especifico"
-      ? historial.filter((h) =>
-          esMismoMes(
-            typeof h.fecha === "string"
-              ? new Date(h.fecha + "T00:00:00").getTime()
-              : h.fecha,
-            mesEsp,
-          ),
-        )
-      : historial.filter((h) => esMismaFecha(h.fecha, rango))
-  ).reverse();
-  const rt = document.getElementById("hist-resumen");
+      ? historial.filter((h) => esMismoMes(_fechaTS(h).getTime(), mesEsp))
+      : historial.filter((h) => esMismaFecha(h.fecha, rango));
+
+  // Vacío total
+  const BLOQUES = [
+    "hist-tarjetas",
+    "hist-comparativa",
+    "hist-grafica",
+    "hist-indicadores",
+    "hist-panes",
+  ];
   const c = document.getElementById("hist-lista");
+
   if (!filtrados.length) {
-    rt.innerHTML = "";
+    BLOQUES.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = "";
+    });
     c.innerHTML = `<div class="vacio"><div class="vacio-icono">📅</div>
                    <p>No hay registros en este periodo.</p></div>`;
     return;
   }
-  const tI = filtrados.reduce((t, h) => t + h.costoTotal, 0);
-  const tV = filtrados.reduce((t, h) => t + h.totalVenta, 0);
-  const tG = filtrados.reduce((t, h) => t + h.ganancia, 0);
-  rt.innerHTML = `
-    <div class="hist-resumen">
-      <div class="hist-card"><div class="hist-label">Inversión</div>
-        <div class="hist-valor">$${tI.toFixed(2)}</div></div>
-      <div class="hist-card"><div class="hist-label">Valor producido</div>
-        <div class="hist-valor">$${tV.toFixed(2)}</div></div>
-      <div class="hist-card"><div class="hist-label">Ganancia</div>
-        <div class="hist-valor">$${tG.toFixed(2)}</div></div>
-    </div>`;
-  c.innerHTML = filtrados
-    .map((h) => {
-      const s = h.ganancia >= 0 ? "+" : "";
-      return `<div class="hist-item">
-      <div>
-        <div class="hist-fecha">${h.fechaTexto || "Sin fecha"}</div>
-        <div class="hist-pan">${h.recetaNombre}</div>
-        <div class="hist-detalle">${h.panes} panes · $${(h.precio || 0).toFixed(2)}/pan</div>
+
+  // ── Métricas base ──
+  const tI = filtrados.reduce((t, h) => t + (h.costoTotal || 0), 0);
+  const tV = filtrados.reduce((t, h) => t + (h.totalVenta || 0), 0);
+  const tG = filtrados.reduce((t, h) => t + (h.ganancia || 0), 0);
+  const tP = filtrados.reduce((t, h) => t + (h.panes || 0), 0);
+  const nProd = filtrados.length;
+
+  // ═══════════════════════════════════════
+  // BLOQUE 2 — Tarjetas grandes
+  // ═══════════════════════════════════════
+  const ganCls = tG >= 0 ? "positivo htc-verde" : "negativo htc-rojo";
+  document.getElementById("hist-tarjetas").innerHTML = `
+    <div class="hist-tarjetas-grid" style="margin-bottom:14px">
+      <div class="hist-tcard htc-dorado">
+        <div class="hist-tcard-ico">💸</div>
+        <div class="hist-tcard-label">Invertido</div>
+        <div class="hist-tcard-val">${_fmt(tI)}</div>
+        <div class="hist-tcard-sub">costo de producción</div>
       </div>
-      <div style="display:flex;align-items:center;gap:7px">
-        <div class="hist-ganancia ${h.ganancia >= 0 ? "pos" : "neg"}">${s}$${(h.ganancia || 0).toFixed(2)}</div>
-        <button class="btn btn-sm btn-editar" onclick="editarHist('${h.id}')">✏️</button>
-        <button class="btn btn-sm btn-eliminar" onclick="eliminarHist('${h.id}')">✕</button>
+      <div class="hist-tcard ${tG >= 0 ? "htc-verde" : "htc-rojo"}">
+        <div class="hist-tcard-ico">${tG >= 0 ? "💰" : "⚠️"}</div>
+        <div class="hist-tcard-label">Ganancia</div>
+        <div class="hist-tcard-val ${tG >= 0 ? "positivo" : "negativo"}">${tG >= 0 ? "+" : ""}${_fmt(tG)}</div>
+        <div class="hist-tcard-sub">${tG >= 0 ? "¡Vas bien!" : "Revisa costos"}</div>
+      </div>
+      <div class="hist-tcard htc-azul">
+        <div class="hist-tcard-ico">🍞</div>
+        <div class="hist-tcard-label">Panes</div>
+        <div class="hist-tcard-val">${tP}</div>
+        <div class="hist-tcard-sub">unidades producidas</div>
+      </div>
+      <div class="hist-tcard htc-cafe">
+        <div class="hist-tcard-ico">📦</div>
+        <div class="hist-tcard-label">Producciones</div>
+        <div class="hist-tcard-val">${nProd}</div>
+        <div class="hist-tcard-sub">registros del periodo</div>
       </div>
     </div>`;
+
+  // ═══════════════════════════════════════
+  // BLOQUE 3 — Comparativa
+  // ═══════════════════════════════════════
+  const nomAnterior = _nombrePeriodoAnterior(rango);
+  const elComp = document.getElementById("hist-comparativa");
+  if (nomAnterior) {
+    const ant = _filtradoAnterior(rango);
+    const aI = ant.reduce((t, h) => t + (h.costoTotal || 0), 0);
+    const aG = ant.reduce((t, h) => t + (h.ganancia || 0), 0);
+    const aP = ant.reduce((t, h) => t + (h.panes || 0), 0);
+    const dI = _delta(tI, aI);
+    const dG = _delta(tG, aG);
+    const dP = _delta(tP, aP);
+    elComp.innerHTML = `
+      <div class="hist-comparativa-card" style="margin-bottom:14px">
+        <div class="hist-comp-titulo">🔄 Esta ${rango === "hoy" ? "día" : rango} vs ${nomAnterior}</div>
+        <div class="hist-comp-grid">
+          <div class="hist-comp-item">
+            <div class="hist-comp-label">💸 Inversión</div>
+            <div class="hist-comp-actual">${_fmt(tI)}</div>
+            <div class="hist-comp-anterior">ant: ${_fmt(aI)}</div>
+            <span class="hist-comp-delta ${dI.cls}">${dI.txt}</span>
+          </div>
+          <div class="hist-comp-item">
+            <div class="hist-comp-label">💰 Ganancia</div>
+            <div class="hist-comp-actual">${_fmt(tG)}</div>
+            <div class="hist-comp-anterior">ant: ${_fmt(aG)}</div>
+            <span class="hist-comp-delta ${dG.cls}">${dG.txt}</span>
+          </div>
+          <div class="hist-comp-item">
+            <div class="hist-comp-label">🍞 Panes</div>
+            <div class="hist-comp-actual">${tP}</div>
+            <div class="hist-comp-anterior">ant: ${aP}</div>
+            <span class="hist-comp-delta ${dP.cls}">${dP.txt}</span>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    elComp.innerHTML = "";
+  }
+
+  // ═══════════════════════════════════════
+  // BLOQUE 4 — Gráfica de barras por día
+  // ═══════════════════════════════════════
+  const grupos = _clavesDia(filtrados);
+  const diasOrdenados = Object.keys(grupos).sort();
+  const maxBarVal = Math.max(
+    ...diasOrdenados.map((k) => {
+      const g = grupos[k];
+      return Math.max(
+        g.reduce((t, h) => t + (h.costoTotal || 0), 0),
+        Math.abs(g.reduce((t, h) => t + (h.ganancia || 0), 0)),
+      );
+    }),
+    1,
+  );
+  const ALTURA_MAX = 120;
+
+  const MESES_CORTOS = [
+    "ene",
+    "feb",
+    "mar",
+    "abr",
+    "may",
+    "jun",
+    "jul",
+    "ago",
+    "sep",
+    "oct",
+    "nov",
+    "dic",
+  ];
+  const DIAS_SEMANA = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+  const barrasHTML = diasOrdenados
+    .map((key) => {
+      const regs = grupos[key];
+      const inv = regs.reduce((t, h) => t + (h.costoTotal || 0), 0);
+      const gan = regs.reduce((t, h) => t + (h.ganancia || 0), 0);
+      const hInv = Math.max(Math.round((inv / maxBarVal) * ALTURA_MAX), 3);
+      const hGan = Math.max(
+        Math.round((Math.abs(gan) / maxBarVal) * ALTURA_MAX),
+        3,
+      );
+      const ganNeg = gan < 0;
+      const [y, m, d] = key.split("-");
+      const fecha = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+      const etq =
+        diasOrdenados.length <= 7 ? DIAS_SEMANA[fecha.getDay()] : `${d}/${m}`;
+      return `
+      <div class="barra-grupo">
+        <div class="barras-cols">
+          <div class="barra-inv" style="height:${hInv}px">
+            <div class="barra-tooltip">💸 ${_fmt(inv)}<br>📅 ${d} ${MESES_CORTOS[parseInt(m) - 1]}</div>
+          </div>
+          <div class="barra-gan${ganNeg ? " negativa" : ""}" style="height:${hGan}px">
+            <div class="barra-tooltip">${ganNeg ? "⚠️" : "💰"} ${_fmt(gan)}<br>📅 ${d} ${MESES_CORTOS[parseInt(m) - 1]}</div>
+          </div>
+        </div>
+        <div class="barra-etiqueta">${etq}</div>
+      </div>`;
     })
     .join("");
+
+  document.getElementById("hist-grafica").innerHTML = `
+    <div class="hist-grafica-card" style="margin-bottom:14px">
+      <div class="hist-grafica-titulo">📈 Producción por día</div>
+      <div class="hist-grafica-leyenda">
+        <div class="leyenda-item">
+          <div class="leyenda-color" style="background:var(--dorado)"></div> Inversión
+        </div>
+        <div class="leyenda-item">
+          <div class="leyenda-color" style="background:var(--verde)"></div> Ganancia
+        </div>
+      </div>
+      <div class="grafica-contenedor">
+        <div class="grafica-barras">${barrasHTML}</div>
+      </div>
+      <div class="grafica-base"></div>
+    </div>`;
+
+  // ═══════════════════════════════════════
+  // BLOQUE 5 — Indicadores inteligentes
+  // ═══════════════════════════════════════
+  // Mejor día
+  let mejorDiaKey = "",
+    mejorDiaGan = -Infinity;
+  diasOrdenados.forEach((key) => {
+    const g = grupos[key].reduce((t, h) => t + (h.ganancia || 0), 0);
+    if (g > mejorDiaGan) {
+      mejorDiaGan = g;
+      mejorDiaKey = key;
+    }
+  });
+  const [my, mm, md] = mejorDiaKey.split("-");
+  const mejorDiaTxt = `${md} ${MESES_CORTOS[parseInt(mm) - 1]}`;
+
+  // Pan más producido
+  const porPanU = {};
+  filtrados.forEach((h) => {
+    if (!porPanU[h.recetaNombre]) porPanU[h.recetaNombre] = 0;
+    porPanU[h.recetaNombre] += h.panes || 0;
+  });
+  const panEstrella = Object.entries(porPanU).sort((a, b) => b[1] - a[1])[0];
+
+  // Promedio diario
+  const promDiario = diasOrdenados.length > 0 ? tG / diasOrdenados.length : 0;
+
+  document.getElementById("hist-indicadores").innerHTML = `
+    <div class="hist-indicadores-card" style="margin-bottom:14px">
+      <div class="hist-ind-titulo">💡 Datos clave del periodo</div>
+      <div class="hist-ind-grid">
+        <div class="hist-ind-item">
+          <div class="hist-ind-ico">🏆</div>
+          <div class="hist-ind-info">
+            <div class="hist-ind-label">Mejor día</div>
+            <div class="hist-ind-val">${mejorDiaTxt}</div>
+            <div class="hist-ind-sub">${_fmt(mejorDiaGan)} de ganancia</div>
+          </div>
+        </div>
+        <div class="hist-ind-item">
+          <div class="hist-ind-ico">⭐</div>
+          <div class="hist-ind-info">
+            <div class="hist-ind-label">Pan estrella</div>
+            <div class="hist-ind-val">${panEstrella?.[0] || "—"}</div>
+            <div class="hist-ind-sub">${panEstrella?.[1] || 0} unidades</div>
+          </div>
+        </div>
+        <div class="hist-ind-item">
+          <div class="hist-ind-ico">📊</div>
+          <div class="hist-ind-info">
+            <div class="hist-ind-label">Promedio/día</div>
+            <div class="hist-ind-val">${_fmt(promDiario)}</div>
+            <div class="hist-ind-sub">de ganancia diaria</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // ═══════════════════════════════════════
+  // BLOQUE 6 — Desglose por tipo de pan
+  // ═══════════════════════════════════════
+  const porPan = {};
+  filtrados.forEach((h) => {
+    if (!porPan[h.recetaNombre])
+      porPan[h.recetaNombre] = { gan: 0, inv: 0, panes: 0, veces: 0 };
+    porPan[h.recetaNombre].gan += h.ganancia || 0;
+    porPan[h.recetaNombre].inv += h.costoTotal || 0;
+    porPan[h.recetaNombre].panes += h.panes || 0;
+    porPan[h.recetaNombre].veces++;
+  });
+  const rankPan = Object.entries(porPan).sort((a, b) => b[1].gan - a[1].gan);
+  const maxPanGan = Math.max(...rankPan.map(([, d]) => Math.abs(d.gan)), 1);
+
+  document.getElementById("hist-panes").innerHTML = `
+    <div class="hist-panes-card" style="margin-bottom:14px">
+      <div class="hist-sec-titulo" style="margin-bottom:14px">🍞 Desglose por tipo de pan</div>
+      ${rankPan
+        .map(([nom, data], i) => {
+          const s = data.gan >= 0 ? "+" : "";
+          const cls = data.gan >= 0 ? "pos" : "neg";
+          const pct = Math.round((Math.abs(data.gan) / maxPanGan) * 100);
+          return `
+        <div class="hist-pan-item">
+          <div class="hist-pan-num ${i === 0 ? "oro" : ""}">${i + 1}</div>
+          <div class="hist-pan-info">
+            <div class="hist-pan-nom">${nom}</div>
+            <div class="hist-pan-det">${data.panes} panes · ${data.veces} prod. · inv. ${_fmt(data.inv)}</div>
+            <div class="hist-pan-barra-wrap">
+              <div class="hist-pan-barra-fill" style="width:${pct}%"></div>
+            </div>
+          </div>
+          <div class="hist-pan-gan ${cls}">${s}${_fmt(data.gan)}</div>
+        </div>`;
+        })
+        .join("")}
+    </div>`;
+
+  // ═══════════════════════════════════════
+  // BLOQUE 7 — Lista agrupada por día
+  // ═══════════════════════════════════════
+  const hoyStr = new Date().toISOString().split("T")[0];
+  c.innerHTML =
+    `
+    <div class="hist-sec-titulo" style="margin-bottom:12px">📅 Registros por día</div>` +
+    [...diasOrdenados]
+      .reverse()
+      .map((key) => {
+        const regs = grupos[key];
+        const diaGan = regs.reduce((t, h) => t + (h.ganancia || 0), 0);
+        const diaInv = regs.reduce((t, h) => t + (h.costoTotal || 0), 0);
+        const diaPanes = regs.reduce((t, h) => t + (h.panes || 0), 0);
+        const [y, m, d] = key.split("-");
+        const fecha = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+        const nomDia = DIAS_SEMANA[fecha.getDay()];
+        const esHoy = key === hoyStr;
+        const ganCls = diaGan >= 0 ? "pos" : "neg";
+        const s = diaGan >= 0 ? "+" : "";
+        const abierto = esHoy ? "abierto" : "";
+
+        const prodsHTML = regs
+          .map((h) => {
+            const sg = h.ganancia >= 0 ? "+" : "";
+            return `
+        <div class="hist-dia-prod">
+          <div>
+            <div class="hist-dia-prod-nom">${h.recetaNombre}</div>
+            <div class="hist-dia-prod-det">
+              ${h.panes} panes · ${_fmt(h.precio || 0)}/pan · inv. ${_fmt(h.costoTotal || 0)}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div class="hist-dia-prod-gan ${h.ganancia >= 0 ? "pos" : "neg"}">
+              ${sg}${_fmt(h.ganancia || 0)}
+            </div>
+            <div class="hist-dia-acciones">
+              <button class="btn btn-sm btn-editar" onclick="editarHist('${h.id}')">✏️</button>
+              <button class="btn btn-sm btn-eliminar" onclick="eliminarHist('${h.id}')">✕</button>
+            </div>
+          </div>
+        </div>`;
+          })
+          .join("");
+
+        return `
+      <div class="hist-dia-grupo">
+        <div class="hist-dia-header ${abierto}" onclick="toggleDiaHist(this)">
+          <div>
+            <div class="hist-dia-fecha">${nomDia} ${d} de ${MESES_CORTOS[parseInt(m) - 1]}${esHoy ? " · Hoy" : ""}</div>
+            <div class="hist-dia-meta">${regs.length} producción(es) · ${diaPanes} panes · inv. ${_fmt(diaInv)}</div>
+          </div>
+          <div class="hist-dia-resumen">
+            <div class="hist-dia-total ${ganCls}">${s}${_fmt(diaGan)}</div>
+            <div class="hist-dia-chevron">▾</div>
+          </div>
+        </div>
+        <div class="hist-dia-body ${abierto}">${prodsHTML}</div>
+      </div>`;
+      })
+      .join("");
 }
 
+// Toggle de grupo por día
+window.toggleDiaHist = function (header) {
+  const body = header.nextElementSibling;
+  header.classList.toggle("abierto");
+  body.classList.toggle("abierto");
+};
+
 // ══════════════════════════════════════════════════
-// 10. ESTADÍSTICAS
+// 10. ESTADÍSTICAS MEJORADAS
 // ══════════════════════════════════════════════════
 window.filtrarStats = function (rango, btn) {
   document
     .querySelectorAll("#tab-estadisticas .filtro-btn")
     .forEach((b) => b.classList.remove("activo"));
   btn.classList.add("activo");
+  filtroStatsMes = "";
+  const sel = document.getElementById("stats-mes-sel");
+  if (sel) sel.value = "";
   dibujarStats(rango);
 };
 
@@ -1132,39 +1505,63 @@ window.filtrarStatsMes = function (mes) {
   dibujarStats(mes ? "mes-especifico" : "todo", mes);
 };
 
+function esMismoAnio(ts) {
+  let d;
+  if (ts && ts.toDate) d = ts.toDate();
+  else if (typeof ts === "number") d = new Date(ts);
+  else if (typeof ts === "string") d = new Date(ts + "T00:00:00");
+  else d = new Date(ts);
+  return d.getFullYear() === new Date().getFullYear();
+}
+
 function dibujarStats(rango = "todo", mesEsp) {
-  const c = document.getElementById("stats-con");
+  // ── Filtrar historial ──
   const filtrados =
     rango === "mes-especifico"
-      ? historial.filter((h) =>
-          esMismoMes(
-            typeof h.fecha === "string"
-              ? new Date(h.fecha + "T00:00:00").getTime()
-              : h.fecha,
-            mesEsp,
-          ),
-        )
-      : historial.filter((h) => esMismaFecha(h.fecha, rango));
+      ? historial.filter((h) => esMismoMes(_fechaTS(h).getTime(), mesEsp))
+      : rango === "anio"
+        ? historial.filter((h) => esMismoAnio(h.fecha))
+        : historial.filter((h) => esMismaFecha(h.fecha, rango));
+
+  // ── Vacío ──
+  const BLOQUES = [
+    "stats-resumen",
+    "stats-grafica",
+    "stats-panes",
+    "stats-clientes",
+    "stats-tipos",
+  ];
   if (!filtrados.length) {
-    c.innerHTML = `<div class="vacio"><div class="vacio-icono">📊</div>
-                   <p>No hay producciones en este periodo.</p></div>`;
+    BLOQUES.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = "";
+    });
+    document.getElementById("stats-con").innerHTML =
+      `<div class="vacio"><div class="vacio-icono">📊</div>
+       <p>No hay producciones en este periodo.</p></div>`;
     return;
   }
-  const tG = filtrados.reduce((t, h) => t + h.ganancia, 0);
-  const tV = filtrados.reduce((t, h) => t + h.totalVenta, 0);
-  const tP = filtrados.reduce((t, h) => t + h.panes, 0);
-  const tI = filtrados.reduce((t, h) => t + h.costoTotal, 0);
+  document.getElementById("stats-con").innerHTML = "";
+
+  // ── Métricas de producción ──
+  const tI = filtrados.reduce((t, h) => t + (h.costoTotal || 0), 0);
+  const tV = filtrados.reduce((t, h) => t + (h.totalVenta || 0), 0);
+  const tG = filtrados.reduce((t, h) => t + (h.ganancia || 0), 0);
+  const tP = filtrados.reduce((t, h) => t + (h.panes || 0), 0);
+
+  // ── Cobrado real a clientes ──
+  const _ventaEnPeriodo = (v) => {
+    const tsV = v.ts || (v.fecha ? new Date(v.fecha).getTime() : 0);
+    if (rango === "mes-especifico") return esMismoMes(tsV, mesEsp);
+    if (rango === "anio") return esMismoAnio(tsV);
+    return esMismaFecha(tsV, rango);
+  };
 
   let tCobrado = 0;
+  let nVentas = 0;
   clientes.forEach((cli) => {
     (cli.ventas || []).forEach((v) => {
-      const tsV = v.ts || (v.fecha ? new Date(v.fecha).getTime() : 0);
-      if (
-        rango === "mes-especifico"
-          ? !esMismoMes(tsV, mesEsp)
-          : !esMismaFecha(tsV, rango)
-      )
-        return;
+      if (!_ventaEnPeriodo(v)) return;
       const panes = v.panes || [
         { cantidad: v.cantidad, precioUnit: v.precioUnit },
       ];
@@ -1172,170 +1569,395 @@ function dibujarStats(rango = "todo", mesEsp) {
         (t, p) => t + (p.cantidad || 0) * (p.precioUnit || 0),
         0,
       );
+      nVentas++;
     });
   });
+
   const gananciaReal = tCobrado - tI;
-  const colorGR = gananciaReal >= 0 ? "var(--verde)" : "var(--rojo)";
-  const signoGR = gananciaReal >= 0 ? "+" : "";
+  const grPos = gananciaReal >= 0;
 
-  const porPan = {};
-  filtrados.forEach((h) => {
-    if (!porPan[h.recetaNombre])
-      porPan[h.recetaNombre] = { ganancia: 0, veces: 0, panes: 0 };
-    porPan[h.recetaNombre].ganancia += h.ganancia;
-    porPan[h.recetaNombre].veces++;
-    porPan[h.recetaNombre].panes += h.panes;
-  });
-  const ranking = Object.entries(porPan).sort(
-    (a, b) => b[1].ganancia - a[1].ganancia,
-  );
-  const maxG = ranking[0]?.[1].ganancia || 1;
+  // ══════════════════════════════════
+  // BLOQUE 2 — Resumen financiero
+  // ══════════════════════════════════
+  document.getElementById("stats-resumen").innerHTML = `
+    <div class="stats-fin-grid" style="margin-bottom:10px">
+      <div class="stats-fin-card sfc-dorado">
+        <div class="stats-fin-ico">💸</div>
+        <div class="stats-fin-label">Invertido</div>
+        <div class="stats-fin-val">${_fmt(tI)}</div>
+        <div class="stats-fin-sub">en producción</div>
+      </div>
+      <div class="stats-fin-card sfc-azul">
+        <div class="stats-fin-ico">💰</div>
+        <div class="stats-fin-label">Cobrado</div>
+        <div class="stats-fin-val">${_fmt(tCobrado)}</div>
+        <div class="stats-fin-sub">a clientes · ${nVentas} ventas</div>
+      </div>
+      <div class="stats-fin-card ${grPos ? "sfc-verde" : "sfc-rojo"}">
+        <div class="stats-fin-ico">${grPos ? "📈" : "⚠️"}</div>
+        <div class="stats-fin-label">Ganancia real</div>
+        <div class="stats-fin-val ${grPos ? "gan-pos" : "gan-neg"}">${grPos ? "+" : ""}${_fmt(gananciaReal)}</div>
+        <div class="stats-fin-sub">cobrado − invertido</div>
+      </div>
+    </div>
+    <div class="stats-mini-grid" style="margin-bottom:14px">
+      <div class="stats-mini-card smc-dorado">
+        <div class="stats-mini-label">Gan. teórica</div>
+        <div class="stats-mini-val">${_fmt(tG)}</div>
+        <div class="stats-mini-sub">precio × panes</div>
+      </div>
+      <div class="stats-mini-card smc-verde">
+        <div class="stats-mini-label">Valor prod.</div>
+        <div class="stats-mini-val">${_fmt(tV)}</div>
+        <div class="stats-mini-sub">si se vende todo</div>
+      </div>
+      <div class="stats-mini-card smc-azul">
+        <div class="stats-mini-label">Panes</div>
+        <div class="stats-mini-val">${tP}</div>
+        <div class="stats-mini-sub">producidos</div>
+      </div>
+      <div class="stats-mini-card smc-cafe">
+        <div class="stats-mini-label">Producciones</div>
+        <div class="stats-mini-val">${filtrados.length}</div>
+        <div class="stats-mini-sub">registros</div>
+      </div>
+    </div>`;
 
-  const porTipo = {};
+  // ══════════════════════════════════
+  // BLOQUE 3 — Gráfica producido vs cobrado
+  // ══════════════════════════════════
+  const gruposDia = _clavesDia(filtrados);
+  const diasOrden = Object.keys(gruposDia).sort();
+
+  // Cobrado por día
+  const cobradoPorDia = {};
   clientes.forEach((cli) => {
     (cli.ventas || []).forEach((v) => {
+      if (!_ventaEnPeriodo(v)) return;
       const tsV = v.ts || (v.fecha ? new Date(v.fecha).getTime() : 0);
-      if (
-        rango === "mes-especifico"
-          ? !esMismoMes(tsV, mesEsp)
-          : !esMismaFecha(tsV, rango)
-      )
-        return;
+      const dv = new Date(tsV);
+      const key = `${dv.getFullYear()}-${String(dv.getMonth() + 1).padStart(2, "0")}-${String(dv.getDate()).padStart(2, "0")}`;
       const panes = v.panes || [
         { cantidad: v.cantidad, precioUnit: v.precioUnit },
       ];
-      const total = panes.reduce(
+      const tot = panes.reduce(
         (t, p) => t + (p.cantidad || 0) * (p.precioUnit || 0),
         0,
       );
-      if (!porTipo[cli.tipo]) porTipo[cli.tipo] = 0;
-      porTipo[cli.tipo] += total;
+      cobradoPorDia[key] = (cobradoPorDia[key] || 0) + tot;
     });
   });
-  const rankTipo = Object.entries(porTipo).sort((a, b) => b[1] - a[1]);
-  const maxT = rankTipo[0]?.[1] || 1;
 
-  c.innerHTML = `
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-titulo">💼 Resumen financiero real</div>
-      <div class="stats-grid" style="margin-top:10px">
-        <div class="stat-card sc-cafe">
-          <div class="stat-label">💸 Invertido</div>
-          <div class="stat-valor">$${tI.toFixed(2)}</div>
-          <div class="stat-sub">en producción</div>
+  const MESES_C = [
+    "ene",
+    "feb",
+    "mar",
+    "abr",
+    "may",
+    "jun",
+    "jul",
+    "ago",
+    "sep",
+    "oct",
+    "nov",
+    "dic",
+  ];
+  const DIAS_C = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  const ALTURA_G = 110;
+
+  const todasClaves = [
+    ...new Set([...diasOrden, ...Object.keys(cobradoPorDia)]),
+  ].sort();
+  const maxGVal = Math.max(
+    ...todasClaves.map((k) => {
+      const prod = (gruposDia[k] || []).reduce(
+        (t, h) => t + (h.totalVenta || 0),
+        0,
+      );
+      const cob = cobradoPorDia[k] || 0;
+      return Math.max(prod, cob);
+    }),
+    1,
+  );
+
+  const barrasG = todasClaves
+    .map((key) => {
+      const regs = gruposDia[key] || [];
+      const prod = regs.reduce((t, h) => t + (h.totalVenta || 0), 0);
+      const cob = cobradoPorDia[key] || 0;
+      const hP = Math.max(
+        Math.round((prod / maxGVal) * ALTURA_G),
+        prod > 0 ? 3 : 0,
+      );
+      const hC = Math.max(
+        Math.round((cob / maxGVal) * ALTURA_G),
+        cob > 0 ? 3 : 0,
+      );
+      const [y, m, d] = key.split("-");
+      const fecha = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+      const etq =
+        todasClaves.length <= 7 ? DIAS_C[fecha.getDay()] : `${d}/${m}`;
+      return `
+      <div class="barra-grupo">
+        <div class="barras-cols">
+          <div class="barra-inv" style="height:${hP}px;background:linear-gradient(180deg,var(--dorado-b),var(--dorado))">
+            <div class="barra-tooltip">📦 Prod: ${_fmt(prod)}<br>📅 ${d} ${MESES_C[parseInt(m) - 1]}</div>
+          </div>
+          <div class="barra-gan" style="height:${hC}px;background:linear-gradient(180deg,#5dd892,var(--verde))">
+            <div class="barra-tooltip">💰 Cobrado: ${_fmt(cob)}<br>📅 ${d} ${MESES_C[parseInt(m) - 1]}</div>
+          </div>
         </div>
-        <div class="stat-card sc-azul">
-          <div class="stat-label">💰 Cobrado</div>
-          <div class="stat-valor">$${tCobrado.toFixed(2)}</div>
-          <div class="stat-sub">a clientes</div>
+        <div class="barra-etiqueta">${etq}</div>
+      </div>`;
+    })
+    .join("");
+
+  document.getElementById("stats-grafica").innerHTML = `
+    <div class="stats-grafica-card" style="margin-bottom:14px">
+      <div class="stats-grafica-titulo">📊 Valor producido vs Cobrado a clientes</div>
+      <div class="stats-leyenda">
+        <div class="stats-leyenda-item">
+          <div class="stats-leyenda-color" style="background:var(--dorado)"></div> Valor producido
         </div>
-        <div class="stat-card" style="border-bottom:3px solid ${colorGR}">
-          <div class="stat-label">📈 Ganancia real</div>
-          <div class="stat-valor" style="color:${colorGR}">${signoGR}$${gananciaReal.toFixed(2)}</div>
-          <div class="stat-sub">cobrado − invertido</div>
+        <div class="stats-leyenda-item">
+          <div class="stats-leyenda-color" style="background:var(--verde)"></div> Cobrado real
         </div>
       </div>
-    </div>
-    <div class="stats-grid">
-      <div class="stat-card sc-dorado"><div class="stat-label">Ganancia teórica</div>
-        <div class="stat-valor">$${tG.toFixed(2)}</div>
-        <div class="stat-sub">precio × panes prod.</div></div>
-      <div class="stat-card sc-verde"><div class="stat-label">Total vendido</div>
-        <div class="stat-valor">$${tV.toFixed(2)}</div></div>
-      <div class="stat-card sc-azul"><div class="stat-label">Panes</div>
-        <div class="stat-valor">${tP}</div></div>
-      <div class="stat-card sc-cafe"><div class="stat-label">Producciones</div>
-        <div class="stat-valor">${filtrados.length}</div></div>
-    </div>
-    <div class="card">
-      <div class="card-titulo">🏆 Pan más rentable</div>
-      ${ranking
+      <div class="grafica-contenedor">
+        <div class="grafica-barras">${barrasG}</div>
+      </div>
+      <div class="grafica-base"></div>
+      <p style="font-size:.7rem;color:var(--texto-s);margin-top:10px;text-align:center">
+        ${
+          tCobrado < tV
+            ? `⚠️ Hay ${_fmt(tV - tCobrado)} producidos sin cobrar registrado`
+            : `✅ Todo lo producido tiene venta registrada`
+        }
+      </p>
+    </div>`;
+
+  // ══════════════════════════════════
+  // BLOQUE 4 — Panes: vendidos vs rentables
+  // ══════════════════════════════════
+  const porPanVendido = {};
+  const porPanRentable = {};
+
+  // Vendidos (desde ventas de clientes)
+  clientes.forEach((cli) => {
+    (cli.ventas || []).forEach((v) => {
+      if (!_ventaEnPeriodo(v)) return;
+      const panes = v.panes || [
+        { recetaNombre: v.recetaNombre, cantidad: v.cantidad },
+      ];
+      panes.forEach((p) => {
+        if (!p.recetaNombre) return;
+        if (!porPanVendido[p.recetaNombre]) porPanVendido[p.recetaNombre] = 0;
+        porPanVendido[p.recetaNombre] += p.cantidad || 0;
+      });
+    });
+  });
+
+  // Rentables (desde historial de producción)
+  filtrados.forEach((h) => {
+    if (!porPanRentable[h.recetaNombre])
+      porPanRentable[h.recetaNombre] = { gan: 0, panes: 0 };
+    porPanRentable[h.recetaNombre].gan += h.ganancia || 0;
+    porPanRentable[h.recetaNombre].panes += h.panes || 0;
+  });
+
+  const rankVendidos = Object.entries(porPanVendido)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+  const rankRentables = Object.entries(porPanRentable)
+    .sort((a, b) => b[1].gan - a[1].gan)
+    .slice(0, 6);
+  const maxV = rankVendidos[0]?.[1] || 1;
+  const maxR = Math.max(...rankRentables.map(([, d]) => Math.abs(d.gan)), 1);
+
+  const htmlVendidos = rankVendidos.length
+    ? rankVendidos
         .map(
-          ([nom, data], i) => `
-        <div class="ranking-item">
-          <div class="ranking-num ${i === 0 ? "oro" : ""}">${i + 1}</div>
-          <div class="ranking-info">
-            <div class="ranking-nom">${nom}</div>
-            <div class="ranking-det">${data.veces} producción(es) · ${data.panes} panes</div>
-            <div class="barra-wrap">
-              <div class="barra-fill" style="width:${Math.round((data.ganancia / maxG) * 100)}%"></div>
+          ([nom, cant], i) => `
+        <div class="stats-pan-item">
+          <div class="stats-pan-num ${i === 0 ? "oro" : ""}">${i + 1}</div>
+          <div class="stats-pan-info">
+            <div class="stats-pan-nom">${nom}</div>
+            <div class="stats-pan-barra-wrap">
+              <div class="stats-pan-barra-fill fill-dorado" style="width:${Math.round((cant / maxV) * 100)}%"></div>
             </div>
           </div>
-          <div class="ranking-tot">$${data.ganancia.toFixed(2)}</div>
+          <div class="stats-pan-val" style="color:var(--cafe-rico)">${cant} u</div>
         </div>`,
         )
-        .join("")}
-    </div>
-    ${
-      rankTipo.length
-        ? `
-    <div class="card">
-      <div class="card-titulo">👥 Mejores clientes del periodo</div>
-      ${(() => {
-        const rc = clientes
-          .map((cli) => {
-            const tot = (cli.ventas || []).reduce((t, v) => {
-              const tsV = v.ts || (v.fecha ? new Date(v.fecha).getTime() : 0);
-              if (
-                rango === "mes-especifico"
-                  ? !esMismoMes(tsV, mesEsp)
-                  : !esMismaFecha(tsV, rango)
-              )
-                return t;
-              const p = v.panes || [
-                { cantidad: v.cantidad, precioUnit: v.precioUnit },
-              ];
-              return (
-                t +
-                p.reduce(
-                  (s, pp) => s + (pp.cantidad || 0) * (pp.precioUnit || 0),
-                  0,
-                )
-              );
-            }, 0);
-            return { nombre: cli.nombre, tipo: cli.tipo, tot };
-          })
-          .filter((c) => c.tot > 0)
-          .sort((a, b) => b.tot - a.tot)
-          .slice(0, 5);
-        const mx = rc[0]?.tot || 1;
-        return rc.length
-          ? rc
-              .map(
-                (cl, i) => `
-          <div class="ranking-item">
-            <div class="ranking-num ${i === 0 ? "oro" : ""}">${i + 1}</div>
-            <div class="ranking-info">
-              <div class="ranking-nom">${cl.nombre}</div>
-              <div class="ranking-det">${TIPOS[cl.tipo] || cl.tipo}</div>
-              <div class="barra-wrap"><div class="barra-fill" style="width:${Math.round((cl.tot / mx) * 100)}%"></div></div>
-            </div>
-            <div class="ranking-tot">$${cl.tot.toFixed(2)}</div>
-          </div>`,
-              )
-              .join("")
-          : '<p style="font-size:.82rem;color:var(--texto-s)">Sin ventas en este periodo.</p>';
-      })()}
-    </div>
-    <div class="card">
-      <div class="card-titulo">🏪 Ventas por tipo de cliente</div>
-      ${rankTipo
+        .join("")
+    : '<p style="font-size:.8rem;color:var(--texto-s)">Sin ventas registradas.</p>';
+
+  const htmlRentables = rankRentables
+    .map(([nom, data], i) => {
+      const pos = data.gan >= 0;
+      return `
+      <div class="stats-pan-item">
+        <div class="stats-pan-num ${i === 0 ? "oro" : ""}">${i + 1}</div>
+        <div class="stats-pan-info">
+          <div class="stats-pan-nom">${nom}</div>
+          <div class="stats-pan-det">${data.panes} panes prod.</div>
+          <div class="stats-pan-barra-wrap">
+            <div class="stats-pan-barra-fill ${pos ? "fill-verde" : "fill-rojo"}"
+                 style="width:${Math.round((Math.abs(data.gan) / maxR) * 100)}%"></div>
+          </div>
+        </div>
+        <div class="stats-pan-val ${pos ? "pos" : "neg"}">${pos ? "+" : ""}${_fmt(data.gan)}</div>
+      </div>`;
+    })
+    .join("");
+
+  document.getElementById("stats-panes").innerHTML = `
+    <div class="stats-panes-grid" style="margin-bottom:14px">
+      <div class="stats-panes-col">
+        <div class="stats-panes-titulo">🛍️ Más vendidos</div>
+        ${htmlVendidos}
+      </div>
+      <div class="stats-panes-col">
+        <div class="stats-panes-titulo">💰 Más rentables</div>
+        ${htmlRentables}
+      </div>
+    </div>`;
+
+  // ══════════════════════════════════
+  // BLOQUE 5 — Mejores clientes
+  // ══════════════════════════════════
+  const rankCli = clientes
+    .map((cli) => {
+      let tot = 0;
+      let nC = 0;
+      (cli.ventas || []).forEach((v) => {
+        if (!_ventaEnPeriodo(v)) return;
+        const panes = v.panes || [
+          { cantidad: v.cantidad, precioUnit: v.precioUnit },
+        ];
+        tot += panes.reduce(
+          (t, p) => t + (p.cantidad || 0) * (p.precioUnit || 0),
+          0,
+        );
+        nC++;
+      });
+      return { nombre: cli.nombre, tipo: cli.tipo, tot, nC };
+    })
+    .filter((c) => c.tot > 0)
+    .sort((a, b) => b.tot - a.tot)
+    .slice(0, 8);
+
+  const maxCli = rankCli[0]?.tot || 1;
+  const totalCli = rankCli.reduce((t, c) => t + c.tot, 0) || 1;
+
+  const COLOR_TIPO = {
+    tienda: "#2563a8",
+    fruver: "#2e7d52",
+    restaurante: "#b83232",
+    cafeteria: "#92400e",
+    ambulante: "#7c3aed",
+    panaderia: "#c9993a",
+    vecino: "#0e7490",
+    mayorista: "#374151",
+    otro: "#6b5340",
+  };
+
+  document.getElementById("stats-clientes").innerHTML = rankCli.length
+    ? `
+    <div class="stats-cli-card" style="margin-bottom:14px">
+      <div class="stats-cli-titulo">👥 Mejores clientes del periodo</div>
+      ${rankCli
         .map(
-          ([tipo, total]) => `
-        <div class="ranking-item">
-          <div style="flex:1">
-            <div class="ranking-nom">${TIPOS[tipo] || tipo}</div>
-            <div class="barra-wrap">
-              <div class="barra-fill" style="width:${Math.round((total / maxT) * 100)}%"></div>
+          (cl, i) => `
+        <div class="stats-cli-item">
+          <div class="stats-cli-pos ${i === 0 ? "oro" : ""}">${i + 1}</div>
+          <div class="stats-cli-avatar" style="background:${COLOR_TIPO[cl.tipo] || "#6b5340"}22;border:2px solid ${COLOR_TIPO[cl.tipo] || "#6b5340"}44">
+            ${emojiTipo(cl.tipo)}
+          </div>
+          <div class="stats-cli-info">
+            <div class="stats-cli-nom">${cl.nombre}</div>
+            <div class="stats-cli-det">${TIPOS[cl.tipo] || cl.tipo} · ${cl.nC} compra(s) · ${Math.round((cl.tot / totalCli) * 100)}% del total</div>
+            <div class="stats-cli-barra-wrap">
+              <div class="stats-cli-barra-fill" style="width:${Math.round((cl.tot / maxCli) * 100)}%"></div>
             </div>
           </div>
-          <div class="ranking-tot">$${total.toFixed(2)}</div>
+          <div class="stats-cli-total">${_fmt(cl.tot)}</div>
         </div>`,
         )
         .join("")}
     </div>`
-        : ""
-    }`;
+    : "";
+
+  // ══════════════════════════════════
+  // BLOQUE 6 — Por tipo de cliente con %
+  // ══════════════════════════════════
+  const porTipo = {};
+  let nCliPorTipo = {};
+  clientes.forEach((cli) => {
+    let hayVenta = false;
+    (cli.ventas || []).forEach((v) => {
+      if (!_ventaEnPeriodo(v)) return;
+      const panes = v.panes || [
+        { cantidad: v.cantidad, precioUnit: v.precioUnit },
+      ];
+      const tot = panes.reduce(
+        (t, p) => t + (p.cantidad || 0) * (p.precioUnit || 0),
+        0,
+      );
+      if (!porTipo[cli.tipo]) porTipo[cli.tipo] = 0;
+      porTipo[cli.tipo] += tot;
+      hayVenta = true;
+    });
+    if (hayVenta) {
+      if (!nCliPorTipo[cli.tipo]) nCliPorTipo[cli.tipo] = 0;
+      nCliPorTipo[cli.tipo]++;
+    }
+  });
+
+  const rankTipo = Object.entries(porTipo).sort((a, b) => b[1] - a[1]);
+  const maxTipo = rankTipo[0]?.[1] || 1;
+  const totalTipo = rankTipo.reduce((t, [, v]) => t + v, 0) || 1;
+
+  const EMOJI_TIPO = {
+    tienda: "🏪",
+    fruver: "🥬",
+    restaurante: "🍽️",
+    cafeteria: "☕",
+    ambulante: "🛒",
+    panaderia: "🍞",
+    vecino: "🏠",
+    mayorista: "📦",
+    otro: "👤",
+  };
+
+  document.getElementById("stats-tipos").innerHTML = rankTipo.length
+    ? `
+    <div class="stats-cli-card">
+      <div class="stats-cli-titulo">🏪 Ventas por tipo de cliente</div>
+      ${rankTipo
+        .map(
+          ([tipo, total]) => `
+        <div class="stats-tipo-item">
+          <div class="stats-tipo-ico">${EMOJI_TIPO[tipo] || "👤"}</div>
+          <div class="stats-tipo-info">
+            <div class="stats-tipo-nom">${TIPOS[tipo] || tipo}
+              <span style="font-size:.68rem;font-weight:400;color:var(--texto-s)">
+                · ${nCliPorTipo[tipo] || 0} cliente(s)
+              </span>
+            </div>
+            <div class="stats-tipo-barra-wrap">
+              <div class="stats-tipo-barra-fill" style="width:${Math.round((total / maxTipo) * 100)}%"></div>
+            </div>
+          </div>
+          <div class="stats-tipo-datos">
+            <div class="stats-tipo-monto">${_fmt(total)}</div>
+            <div class="stats-tipo-pct">${Math.round((total / totalTipo) * 100)}% del total</div>
+          </div>
+        </div>`,
+        )
+        .join("")}
+    </div>`
+    : "";
 }
 
 // ══════════════════════════════════════════════════
@@ -1847,7 +2469,6 @@ window.registrarVenta = async function () {
     await setDoc(doc(db, "clientes", cliId), { ventas }, { merge: true });
     document.getElementById("vta-cli").value = "";
     document.getElementById("vta-nota").value = "";
-    agregarFilaVentaInicial();
     toast("Venta guardada ✓");
     syncOk();
   } catch (e) {
@@ -1855,6 +2476,343 @@ window.registrarVenta = async function () {
     toast("Error");
   }
 };
+
+// ══════════════════════════════════════════════════
+// 18. DESCARGAS - Filtros y Funciones de Exportación
+// ══════════════════════════════════════════════════
+
+let periodoDescargas = "todo";
+let mesDescargasEspecifico = "";
+
+window.filtrarDescargas = function (rango, btn) {
+  periodoDescargas = rango;
+  mesDescargasEspecifico = "";
+  document
+    .querySelectorAll("#tab-descargas .filtro-btn")
+    .forEach((b) => b.classList.remove("activo"));
+  if (btn) btn.classList.add("activo");
+
+  if (rango === "mes-especifico") {
+    document.getElementById("desc-mes-selector").classList.add("visible");
+    llenarSelectMeses();
+  } else {
+    document.getElementById("desc-mes-selector").classList.remove("visible");
+  }
+};
+
+window.actualizarMesDescargas = function (mes) {
+  mesDescargasEspecifico = mes;
+};
+
+function _parseFecha(f) {
+  if (!f) return new Date();
+  if (f && f.toDate) return f.toDate();
+  if (typeof f === "number") return new Date(f);
+  return new Date(f + "T00:00:00");
+}
+
+function filtrarPorPeriodo(items, campoFecha) {
+  const hoy = new Date();
+  const semanaAgo = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  return items.filter((item) => {
+    const f = item[campoFecha];
+    const fecha = _parseFecha(f);
+
+    if (periodoDescargas === "hoy")
+      return fecha.toDateString() === hoy.toDateString();
+    if (periodoDescargas === "semana") return fecha >= semanaAgo;
+    if (periodoDescargas === "mes")
+      return (
+        fecha.getMonth() === hoy.getMonth() &&
+        fecha.getFullYear() === hoy.getFullYear()
+      );
+    if (periodoDescargas === "mes-especifico" && mesDescargasEspecifico) {
+      const [y, m] = mesDescargasEspecifico.split("-");
+      return (
+        fecha.getFullYear() === parseInt(y) &&
+        fecha.getMonth() === parseInt(m) - 1
+      );
+    }
+    return true;
+  });
+}
+
+function generarFechaHoy() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function descargarCSV(nombre, contenido) {
+  const csv = contenido.map((fila) => fila.join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `niangel-${nombre}-${generarFechaHoy()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+window.descargarResumenContable = function () {
+  const filas = [
+    ["Mes", "Invertido", "Cobrado", "Ganancia Real", "Producciones"],
+  ];
+  const mesesData = {};
+
+  filtrarPorPeriodo(historial, "fecha").forEach((h) => {
+    const d = _parseFecha(h.fecha);
+    const mesKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!mesesData[mesKey])
+      mesesData[mesKey] = { invertido: 0, cobrado: 0, prod: 0 };
+    mesesData[mesKey].invertido += h.costoTotal || 0;
+    mesesData[mesKey].prod++;
+  });
+
+  clientes.forEach((cli) => {
+    (cli.ventas || []).forEach((v) => {
+      const d = _parseFecha(v.fecha);
+      const mesKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!filtrarPorPeriodo([v], "fecha").length) return;
+      if (!mesesData[mesKey])
+        mesesData[mesKey] = { invertido: 0, cobrado: 0, prod: 0 };
+      const panes = v.panes || [
+        { cantidad: v.cantidad, precioUnit: v.precioUnit },
+      ];
+      mesesData[mesKey].cobrado += panes.reduce(
+        (t, p) => t + (p.cantidad || 0) * (p.precioUnit || 0),
+        0,
+      );
+    });
+  });
+
+  const MESES_NOM = [
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
+  ];
+  Object.entries(mesesData)
+    .sort()
+    .reverse()
+    .forEach(([mesKey, data]) => {
+      const [y, m] = mesKey.split("-");
+      const ganancia = data.cobrado - data.invertido;
+      filas.push([
+        `${MESES_NOM[parseInt(m) - 1]} ${y}`,
+        data.invertido.toFixed(2),
+        data.cobrado.toFixed(2),
+        ganancia.toFixed(2),
+        data.prod,
+      ]);
+    });
+
+  descargarCSV("resumen-contable", filas);
+  toast("Resumen contable descargado");
+};
+
+window.descargarProduccion = function () {
+  const filas = [
+    [
+      "Fecha",
+      "Pan",
+      "Panes",
+      "Precio",
+      "Costo Total",
+      "Venta Total",
+      "Ganancia",
+    ],
+  ];
+
+  filtrarPorPeriodo(historial, "fecha")
+    .slice()
+    .reverse()
+    .forEach((h) => {
+      filas.push([
+        h.fechaTexto || h.fecha || "",
+        h.recetaNombre || "",
+        h.panes || "",
+        (h.precio || 0).toFixed(2),
+        (h.costoTotal || 0).toFixed(2),
+        (h.totalVenta || 0).toFixed(2),
+        (h.ganancia || 0).toFixed(2),
+      ]);
+    });
+
+  descargarCSV("produccion", filas);
+  toast("Historial de producción descargado");
+};
+
+window.descargarRecetas = function () {
+  const filas = [
+    [
+      "Nombre Pan",
+      "Rinde",
+      "Precio Venta",
+      "Costo Total",
+      "Costo/Pan",
+      "Ganancia/Pan",
+    ],
+  ];
+
+  recetas.forEach((rec) => {
+    const costo = (rec.ings || []).reduce((t, ri) => {
+      const ing = ingredientes.find((i) => i.id === ri.ingId);
+      return ing ? t + (ing.precio / ing.cantidad) * ri.cantidad : t;
+    }, 0);
+    const rinde = rec.rinde || 1;
+    const precio = rec.precio || 0;
+    const costoPan = costo / rinde;
+    const ganancia = precio - costoPan;
+
+    filas.push([
+      rec.nombre,
+      rinde,
+      precio.toFixed(2),
+      costo.toFixed(2),
+      costoPan.toFixed(3),
+      ganancia.toFixed(2),
+    ]);
+  });
+
+  descargarCSV("recetas", filas);
+  toast("Recetas descargadas");
+};
+
+window.descargarBodega = function () {
+  const filas = [
+    ["Ingrediente", "Cantidad", "Unidad", "Precio Total", "Precio/Unidad"],
+  ];
+
+  ingredientes.forEach((ing) => {
+    const ppu = ing.cantidad > 0 ? (ing.precio / ing.cantidad).toFixed(3) : "0";
+    filas.push([
+      ing.nombre,
+      ing.cantidad,
+      ing.unidad,
+      (ing.precio || 0).toFixed(2),
+      ppu,
+    ]);
+  });
+
+  descargarCSV("bodega", filas);
+  toast("Bodega descargada");
+};
+
+window.descargarClientes = function () {
+  const filas = [["Cliente", "Tipo", "Teléfono", "Total Comprado", "Compras"]];
+
+  clientes.forEach((cli) => {
+    const totalCompras = (cli.ventas || []).reduce((t, v) => {
+      const panes = v.panes || [
+        { cantidad: v.cantidad, precioUnit: v.precioUnit },
+      ];
+      return (
+        t +
+        panes.reduce((s, p) => s + (p.cantidad || 0) * (p.precioUnit || 0), 0)
+      );
+    }, 0);
+    const nCompras = (cli.ventas || []).length;
+
+    filas.push([
+      cli.nombre,
+      cli.tipo || "",
+      cli.tel || "",
+      totalCompras.toFixed(2),
+      nCompras,
+    ]);
+  });
+
+  descargarCSV("clientes", filas);
+  toast("Clientes descargados");
+};
+
+window.descargarVentas = function () {
+  const filas = [["Fecha", "Cliente", "Tipo", "Panes", "Total"]];
+
+  clientes.forEach((cli) => {
+    (cli.ventas || []).forEach((v) => {
+      if (!filtrarPorPeriodo([v], "fecha").length) return;
+      const panes = v.panes || [
+        { recetaNombre: v.recetaNombre, cantidad: v.cantidad },
+      ];
+      const resumen = panes
+        .map((p) => `${p.cantidad}x${p.recetaNombre}`)
+        .join("; ");
+      filas.push([
+        v.fecha || "",
+        cli.nombre,
+        cli.tipo || "",
+        resumen,
+        (v.total || 0).toFixed(2),
+      ]);
+    });
+  });
+
+  descargarCSV("ventas", filas);
+  toast("Ventas descargadas");
+};
+
+window.descargarTodo = function () {
+  toast("Iniciando descarga de reportes...");
+  setTimeout(() => {
+    descargarResumenContable();
+    setTimeout(() => {
+      descargarProduccion();
+      setTimeout(() => {
+        descargarRecetas();
+        setTimeout(() => {
+          descargarBodega();
+          setTimeout(() => {
+            descargarClientes();
+            setTimeout(() => {
+              descargarVentas();
+            }, 300);
+          }, 300);
+        }, 300);
+      }, 300);
+    }, 300);
+  }, 300);
+};
+
+function llenarSelectMeses() {
+  const mesesSet = new Set();
+  historial.forEach((h) => {
+    const d = _parseFecha(h.fecha);
+    if (!isNaN(d))
+      mesesSet.add(
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      );
+  });
+  clientes.forEach((cli) => {
+    (cli.ventas || []).forEach((v) => {
+      const d = _parseFecha(v.fecha);
+      if (!isNaN(d))
+        mesesSet.add(
+          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        );
+    });
+  });
+  const meses = [...mesesSet].sort().reverse();
+  const sel = document.getElementById("desc-mes-sel");
+  if (sel) {
+    sel.innerHTML =
+      '<option value="">Selecciona mes</option>' +
+      meses
+        .map((m) => {
+          const [y, mo] = m.split("-");
+          return `<option value="${m}">Mes ${mo}/${y}</option>`;
+        })
+        .join("");
+  }
+}
 
 window.editarVenta = function (cliId, ventaId) {
   const cli = clientes.find((c) => c.id === cliId);

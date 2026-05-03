@@ -84,6 +84,10 @@
         <button class="nav-btn" onclick="irTab('clientes', this)">
           <span class="nav-icono">👥</span>Clientes
         </button>
+        <button class="nav-btn" onclick="irTab('descargas', this)">
+          <span class="nav-icono">📥</span>
+          <div>Descargas</div>
+        </button>
       </nav>
     </header>
 
@@ -264,9 +268,11 @@
       <section class="seccion" id="tab-historial">
         <div class="pag-header">
           <h2>📅 Historial de Producción</h2>
-          <p>Registro de todas tus producciones</p>
+          <p>Análisis completo de tu producción por periodo</p>
         </div>
-        <div class="filtros">
+
+        <!-- BLOQUE 1: Filtros -->
+        <div class="filtros" id="hist-filtros">
           <button class="filtro-btn activo" onclick="filtrarH('hoy', this)">
             Hoy
           </button>
@@ -285,7 +291,23 @@
             </select>
           </div>
         </div>
-        <div id="hist-resumen"></div>
+
+        <!-- BLOQUE 2: Tarjetas de resumen grandes -->
+        <div id="hist-tarjetas"></div>
+
+        <!-- BLOQUE 3: Comparativa con periodo anterior -->
+        <div id="hist-comparativa"></div>
+
+        <!-- BLOQUE 4: Gráfica de barras -->
+        <div id="hist-grafica"></div>
+
+        <!-- BLOQUE 5: Indicadores inteligentes -->
+        <div id="hist-indicadores"></div>
+
+        <!-- BLOQUE 6: Desglose por tipo de pan -->
+        <div id="hist-panes"></div>
+
+        <!-- BLOQUE 7: Registros agrupados por día -->
         <div id="hist-lista">
           <div class="cargando">
             <div class="spinner"></div>
@@ -298,20 +320,28 @@
       <section class="seccion" id="tab-estadisticas">
         <div class="pag-header">
           <h2>📊 Estadísticas</h2>
-          <p>Análisis de tu negocio</p>
+          <p>Análisis completo de tu negocio</p>
         </div>
-        <div class="filtros">
+
+        <!-- BLOQUE 1: Filtros completos -->
+        <div class="filtros" id="stats-filtros">
+          <button class="filtro-btn" onclick="filtrarStats('hoy', this)">
+            Hoy
+          </button>
+          <button class="filtro-btn" onclick="filtrarStats('semana', this)">
+            Semana
+          </button>
+          <button class="filtro-btn" onclick="filtrarStats('mes', this)">
+            Mes
+          </button>
+          <button class="filtro-btn" onclick="filtrarStats('anio', this)">
+            Año
+          </button>
           <button
             class="filtro-btn activo"
             onclick="filtrarStats('todo', this)"
           >
             Todo
-          </button>
-          <button class="filtro-btn" onclick="filtrarStats('mes', this)">
-            Este mes
-          </button>
-          <button class="filtro-btn" onclick="filtrarStats('semana', this)">
-            Esta semana
           </button>
           <div class="select-wrap" style="min-width: 155px">
             <select id="stats-mes-sel" onchange="filtrarStatsMes(this.value)">
@@ -319,6 +349,14 @@
             </select>
           </div>
         </div>
+
+        <!-- Contenedor principal — todo se dibuja aquí -->
+        <div id="stats-resumen"></div>
+        <div id="stats-grafica"></div>
+        <div id="stats-panes"></div>
+        <div id="stats-clientes"></div>
+        <div id="stats-tipos"></div>
+
         <div id="stats-con">
           <div class="vacio">
             <div class="vacio-icono">📊</div>
@@ -540,6 +578,322 @@
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- NUEVA SECCIÓN: DESCARGAS -->
+      <section id="tab-descargas" class="seccion">
+        <!-- HEADER DE LA SECCIÓN -->
+        <div class="pag-header">
+          <h2>📥 Descargas y Reportes</h2>
+          <p>
+            Exporta tus datos contables en CSV para Excel, Google Sheets o
+            comparte con tu contador
+          </p>
+        </div>
+
+        <!-- FILTROS DE PERÍODO -->
+        <div class="card">
+          <div class="card-titulo">Período de exportación</div>
+
+          <div class="filtros">
+            <button
+              class="filtro-btn activo"
+              onclick="filtrarDescargas('hoy', this)"
+            >
+              Hoy
+            </button>
+            <button
+              class="filtro-btn"
+              onclick="filtrarDescargas('semana', this)"
+            >
+              Esta semana
+            </button>
+            <button class="filtro-btn" onclick="filtrarDescargas('mes', this)">
+              Este mes
+            </button>
+            <button class="filtro-btn" onclick="filtrarDescargas('todo', this)">
+              Todo el tiempo
+            </button>
+            <button
+              class="filtro-btn"
+              onclick="filtrarDescargas('mes-especifico', this)"
+            >
+              Mes específico
+            </button>
+          </div>
+
+          <div id="desc-mes-selector" style="display: none; margin-top: 12px">
+            <label
+              style="
+                font-size: 0.7rem;
+                font-weight: 700;
+                color: var(--cafe-rico);
+                text-transform: uppercase;
+                letter-spacing: 0.8px;
+                display: block;
+                margin-bottom: 5px;
+              "
+              >Selecciona un mes</label
+            >
+            <select
+              id="desc-mes-sel"
+              onchange="actualizarMesDescargas(this.value)"
+              style="width: 100%; max-width: 200px"
+            >
+              <option value="">Cargando meses...</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- REPORTES DISPONIBLES -->
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+          "
+        >
+          <!-- REPORTE 1: RESUMEN CONTABLE -->
+          <div class="card">
+            <div class="card-titulo">Resumen Contable</div>
+            <div class="card-subtitulo">Ganancia real vs teórica</div>
+            <p
+              style="
+                font-size: 0.82rem;
+                color: var(--texto-s);
+                margin-bottom: 10px;
+                line-height: 1.5;
+              "
+            >
+              Desglose detallado por mes. Muestra lo que realmente ganaste
+              (cobrado a clientes menos invertido en producción).
+            </p>
+            <p
+              style="
+                font-size: 0.72rem;
+                color: var(--cafe-mid);
+                margin-bottom: 12px;
+                font-weight: 600;
+              "
+            >
+              Archivo: resumen-contable-{fecha}.csv
+            </p>
+            <button class="btn btn-dorado" onclick="descargarResumenContable()">
+              Descargar
+            </button>
+          </div>
+
+          <!-- REPORTE 2: PRODUCCIÓN -->
+          <div class="card">
+            <div class="card-titulo">Historial de Producción</div>
+            <div class="card-subtitulo">Cada pan, costo y ganancia</div>
+            <p
+              style="
+                font-size: 0.82rem;
+                color: var(--texto-s);
+                margin-bottom: 10px;
+                line-height: 1.5;
+              "
+            >
+              Análisis detallado de cada producción. Identifica cuál pan te deja
+              más ganancia.
+            </p>
+            <p
+              style="
+                font-size: 0.72rem;
+                color: var(--cafe-mid);
+                margin-bottom: 12px;
+                font-weight: 600;
+              "
+            >
+              Archivo: produccion-{fecha}.csv
+            </p>
+            <button class="btn btn-dorado" onclick="descargarProduccion()">
+              Descargar
+            </button>
+          </div>
+
+          <!-- REPORTE 3: RECETAS -->
+          <div class="card">
+            <div class="card-titulo">Recetas y Costos</div>
+            <div class="card-subtitulo">Ingredientes con precios</div>
+            <p
+              style="
+                font-size: 0.82rem;
+                color: var(--texto-s);
+                margin-bottom: 10px;
+                line-height: 1.5;
+              "
+            >
+              Todas tus recetas con costo de ingredientes y margen de ganancia
+              por pan.
+            </p>
+            <p
+              style="
+                font-size: 0.72rem;
+                color: var(--cafe-mid);
+                margin-bottom: 12px;
+                font-weight: 600;
+              "
+            >
+              Archivo: recetas-{fecha}.csv
+            </p>
+            <button class="btn btn-dorado" onclick="descargarRecetas()">
+              Descargar
+            </button>
+          </div>
+
+          <!-- REPORTE 4: BODEGA -->
+          <div class="card">
+            <div class="card-titulo">Bodega e Inventario</div>
+            <div class="card-subtitulo">Ingredientes disponibles</div>
+            <p
+              style="
+                font-size: 0.82rem;
+                color: var(--texto-s);
+                margin-bottom: 10px;
+                line-height: 1.5;
+              "
+            >
+              Lista completa de ingredientes con cantidad, unidad, precio total
+              y unitario.
+            </p>
+            <p
+              style="
+                font-size: 0.72rem;
+                color: var(--cafe-mid);
+                margin-bottom: 12px;
+                font-weight: 600;
+              "
+            >
+              Archivo: bodega-{fecha}.csv
+            </p>
+            <button class="btn btn-dorado" onclick="descargarBodega()">
+              Descargar
+            </button>
+          </div>
+
+          <!-- REPORTE 5: CLIENTES -->
+          <div class="card">
+            <div class="card-titulo">Base de Clientes</div>
+            <div class="card-subtitulo">Contacto y datos</div>
+            <p
+              style="
+                font-size: 0.82rem;
+                color: var(--texto-s);
+                margin-bottom: 10px;
+                line-height: 1.5;
+              "
+            >
+              Información de clientes, total comprado y última transacción. Útil
+              para mailing.
+            </p>
+            <p
+              style="
+                font-size: 0.72rem;
+                color: var(--cafe-mid);
+                margin-bottom: 12px;
+                font-weight: 600;
+              "
+            >
+              Archivo: clientes-{fecha}.csv
+            </p>
+            <button class="btn btn-dorado" onclick="descargarClientes()">
+              Descargar
+            </button>
+          </div>
+
+          <!-- REPORTE 6: VENTAS -->
+          <div class="card">
+            <div class="card-titulo">Historial de Ventas</div>
+            <div class="card-subtitulo">Todas las transacciones</div>
+            <p
+              style="
+                font-size: 0.82rem;
+                color: var(--texto-s);
+                margin-bottom: 10px;
+                line-height: 1.5;
+              "
+            >
+              Registro completo de todas las ventas a clientes. Para impuestos y
+              reportes.
+            </p>
+            <p
+              style="
+                font-size: 0.72rem;
+                color: var(--cafe-mid);
+                margin-bottom: 12px;
+                font-weight: 600;
+              "
+            >
+              Archivo: ventas-{fecha}.csv
+            </p>
+            <button class="btn btn-dorado" onclick="descargarVentas()">
+              Descargar
+            </button>
+          </div>
+        </div>
+
+        <!-- PAQUETE COMPLETO -->
+        <div
+          class="card"
+          style="
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            border: 2px solid #7c3aed;
+          "
+        >
+          <div class="card-titulo" style="color: white; margin-bottom: 8px">
+            ⬇️ Paquete Completo
+          </div>
+          <p
+            style="
+              font-size: 0.84rem;
+              color: rgba(255, 255, 255, 0.95);
+              margin-bottom: 14px;
+              line-height: 1.6;
+            "
+          >
+            Descarga 6 archivos CSV automáticamente. Todos los datos de tu
+            negocio en una carpeta.
+          </p>
+          <button
+            class="btn"
+            style="
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              color: white;
+              box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+            "
+            onclick="descargarTodo()"
+          >
+            ⬇️ Descargar 6 reportes
+          </button>
+        </div>
+
+        <!-- NOTA AL PIE -->
+        <div
+          style="
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(107, 83, 64, 0.08);
+            border-radius: 10px;
+            border-left: 4px solid var(--cafe-claro);
+          "
+        >
+          <p
+            style="
+              font-size: 0.76rem;
+              color: var(--texto-s);
+              line-height: 1.6;
+              margin: 0;
+            "
+          >
+            <strong>Nota:</strong> Los archivos se descargan automáticamente a
+            tu carpeta de descargas. Formato CSV compatible con Excel, Google
+            Sheets y programas contables. Los datos NO salen de tu navegador —
+            todo se procesa localmente.
+          </p>
         </div>
       </section>
     </main>
